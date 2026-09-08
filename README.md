@@ -45,7 +45,7 @@ magazine.shh.tmu.edu.tw
 ## Current MVP
 
 - Public preview: <https://shh-magazine.vercel.app>
-- Demo issues: 2026-06, 2026-07, 2026-08
+- Published issues: 2026-06, 2026-07, 2026-08, and the 2026-09 Pilot issue
 - Primary public acceptance viewport: 375/390px mobile
 - Current handoff status and known gaps: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 - First-time Codex guide: [`docs/COLLEAGUE_QUICKSTART.md`](docs/COLLEAGUE_QUICKSTART.md)

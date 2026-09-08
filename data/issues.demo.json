@@ -1,5 +1,22 @@
 [
   {
+    "issue_id": "2026-09",
+    "year": 2026,
+    "month": 9,
+    "publish_date": "2026-09-01",
+    "status": "published",
+    "issue_number": "2026-09",
+    "cover_image": "/demo/covers/2026-09.jpg",
+    "pdf_url": null,
+    "local_pdf_path": "/demo/issues/2026-09.pdf",
+    "cover_title": "手術新紀元：達文西機械手臂",
+    "homepage_headline": "手術新紀元：達文西機械手臂",
+    "homepage_summary": "Demo 階段請以實際醫訊封面主題與編輯摘要取代此文字。",
+    "outpatient_page": 10,
+    "shuttle_page": 17,
+    "features": []
+  },
+  {
     "issue_id": "2026-08",
     "year": 2026,
     "month": 8,

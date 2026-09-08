@@ -1,6 +1,6 @@
 # Action Items
 
-Last updated: 2026-09-03
+Last updated: 2026-09-08
 
 ## MVP completed
 
@@ -19,7 +19,8 @@ Last updated: 2026-09-03
 
 ## P0 - before distributing Pilot QR codes
 
-- [ ] Add the approved 2026-09 issue metadata, PDF, cover, title, summary, outpatient page, and shuttle page.
+- [x] Add the supplied 2026-09 issue metadata, PDF, cover, title, publish date, outpatient start page, and shuttle page.
+- [ ] Replace the supplied 2026-09 Demo summary with an approved editorial summary.
 - [ ] Replace demo placements with the confirmed 7-8 public-screen locations.
 - [ ] Confirm the real 2026-09 Creative records and Creative x Placement matrix.
 - [ ] Replace the Print Content placeholder with the approved official doctor registration URL.

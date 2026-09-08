@@ -15,11 +15,11 @@ https://shh-magazine.vercel.app
 
 Current state:
 - The MVP already contains Public pages, QR routing, a PDF.js Reader, event ingestion, and a protected Admin route in one Next.js app.
-- Demo issues 2026-06, 2026-07, and 2026-08 have committed PDFs and covers.
+- Published issues 2026-06, 2026-07, 2026-08, and the 2026-09 Pilot issue have committed PDFs and covers.
 - The public experience is mobile-first because visitors scan QR codes with phones. Treat 375/390px as the primary acceptance viewport.
 - Preserve each PDF page's real portrait or landscape aspect ratio, lazy vertical rendering, page query routing, and zoom behavior.
-- 2026-09 issue data, final placements, final QR matrix, approved doctor registration URL, durable analytics storage, and real Admin data are not complete.
-- Some demo QR records target the missing 2026-09 issue. Do not print, distribute, or treat them as production QR codes.
+- The 2026-09 issue is present, but its supplied summary remains a Demo placeholder. Final placements, final QR matrix, approved doctor registration URL, durable analytics storage, and real Admin data are not complete.
+- Some Demo QR records target 2026-09 but are not confirmed production mappings. Do not print, distribute, or treat them as production QR codes.
 - `/admin` currently returns 503 in the active deployment; verify non-empty Vercel Basic Auth variables and redeploy before Admin QA.
 - The intended analytics path is the existing Google Apps Script Web App writing events to Google Sheet. Before integration, read `docs/QR_ANALYTICS_SETUP.md` and request the existing script, endpoint, Sheet schema, sample rows, access settings, authentication method, and final QR business mappings. Do not invent or replace the existing integration without reviewing it.
 - Without a trusted exposure denominator, use QR entries/interactions or placement share; never call the metric scan rate.

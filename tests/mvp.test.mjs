@@ -1,14 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const loadJson = async (name) => JSON.parse(await readFile(new URL(`../data/${name}`, import.meta.url)));
 
-test("latest published issue is metadata-driven and demo months are present", async () => {
+test("latest published issue is metadata-driven and all published months are present", async () => {
   const issues = await loadJson("issues.demo.json");
   const published = issues.filter((issue) => issue.status === "published").sort((a, b) => b.publish_date.localeCompare(a.publish_date));
-  assert.equal(published[0].issue_id, "2026-08");
-  assert.deepEqual(new Set(issues.map((issue) => issue.issue_id)), new Set(["2026-06", "2026-07", "2026-08"]));
+  assert.equal(published[0].issue_id, "2026-09");
+  assert.deepEqual(new Set(issues.map((issue) => issue.issue_id)), new Set(["2026-06", "2026-07", "2026-08", "2026-09"]));
 });
 
 test("QR registry provides all required route types and unique IDs", async () => {
@@ -80,7 +81,7 @@ test("TypeScript resolves the @ alias from the project root", async () => {
 });
 
 test("all demo issues include a readable PDF and generated cover", async () => {
-  for (const issueId of ["2026-06", "2026-07", "2026-08"]) {
+  for (const issueId of ["2026-06", "2026-07", "2026-08", "2026-09"]) {
     const pdfUrl = new URL(`../public/demo/issues/${issueId}.pdf`, import.meta.url);
     const coverUrl = new URL(`../public/demo/covers/${issueId}.jpg`, import.meta.url);
     const [pdf, cover, pdfStat, coverStat] = await Promise.all([
@@ -103,6 +104,7 @@ test("issue cards use large dates, secondary themes, and visible cover shadows",
     "2026-06": "影像的監控者 影像醫學部",
     "2026-07": "雙和18 幸福醫家－院慶特輯",
     "2026-08": "明承經典 燦動非凡",
+    "2026-09": "手術新紀元：達文西機械手臂",
   };
   assert.deepEqual(
     Object.fromEntries(issues.map((issue) => [issue.issue_id, issue.homepage_headline])),
@@ -121,6 +123,14 @@ test("issue cards use large dates, secondary themes, and visible cover shadows",
   assert.match(css, /\.cover-small\{box-shadow:(?!none)/);
 });
 
+test("the primary cover is prioritized without eagerly loading archive covers", async () => {
+  const cover = await readFile(
+    new URL("../components/Cover.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(cover, /priority=\{!small\}/);
+});
+
 test("verified practical-information pages are configured for every issue", async () => {
   const issues = await loadJson("issues.demo.json");
   for (const issue of issues) {
@@ -130,6 +140,30 @@ test("verified practical-information pages are configured for every issue", asyn
 
   const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(home, /實際頁碼將由編輯 metadata 提供/);
+});
+
+test("the September practical-information pages fit within the supplied PDF", async () => {
+  const issues = await loadJson("issues.demo.json");
+  const issue = issues.find((item) => item.issue_id === "2026-09");
+  assert.ok(issue);
+  assert.equal(issue.outpatient_page, 10);
+  assert.equal(issue.shuttle_page, 17);
+
+  const pdf = await readFile(
+    new URL("../public/demo/issues/2026-09.pdf", import.meta.url),
+  );
+  const document = await getDocument({
+    data: new Uint8Array(pdf),
+    disableWorker: true,
+  }).promise;
+
+  try {
+    assert.equal(document.numPages, 17);
+    assert.ok(issue.outpatient_page <= document.numPages);
+    assert.ok(issue.shuttle_page <= document.numPages);
+  } finally {
+    await document.destroy();
+  }
 });
 
 test("the issue archive provides a visible return-home button", async () => {
