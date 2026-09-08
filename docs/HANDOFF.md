@@ -1,6 +1,6 @@
 # SHH Magazine MVP Handoff
 
-Last verified: 2026-09-03 (Asia/Taipei)
+Last verified: 2026-09-08 (Asia/Taipei)
 
 First-time Codex users should begin with `docs/COLLEAGUE_QUICKSTART.md`.
 
@@ -21,8 +21,8 @@ The public homepage, archive, issue pages, PDF reader, outpatient route, and shu
 ## Implemented MVP
 
 - Metadata-driven homepage and archive.
-- Published demo issues for 2026-06, 2026-07, and 2026-08.
-- Local PDF and cover assets for all three issues.
+- Published issues for 2026-06, 2026-07, 2026-08, and the 2026-09 Pilot issue.
+- Local PDF and cover assets for all four issues.
 - PDF.js reader with vertical lazy rendering, per-page aspect ratios, page query routing, desktop button zoom, mobile fit-width, and branded failure UI.
 - Semantic `/latest/outpatient` and `/latest/shuttle` redirects. Current verified PDF page indices are 10 and 17.
 - Placement, Creative x Placement, and Print Content QR route shapes.
@@ -32,12 +32,12 @@ The public homepage, archive, issue pages, PDF reader, outpatient route, and shu
 
 ## Known gaps and blockers
 
-1. `data/creatives.demo.json` and several `data/qr-routes.demo.json` records still target `2026-09`, but no published `2026-09` issue exists. Those routes currently lead to a missing issue and must not be used as real QR codes yet.
+1. `data/creatives.demo.json` and several `data/qr-routes.demo.json` records target `2026-09`, but they remain Demo mappings. Do not print or distribute them until the final Creative, Placement, and QR registry is confirmed.
 2. Placement records are examples only. Replace them with the confirmed 7-8 Pilot locations and the final Creative x Placement matrix.
 3. The Print Content destination is only the official hospital homepage placeholder. Replace it with the approved doctor registration URL.
 4. `ANALYTICS_ENDPOINT` is only an adapter seam. Without a working endpoint, events are accepted but not durably stored.
 5. `/admin` displays hardcoded demo metrics; it is not connected to real analytics data.
-6. Issue summaries are placeholders and `features` arrays are empty.
+6. Issue summaries, including the supplied 2026-09 Demo summary, are placeholders and `features` arrays are empty.
 7. Automated tests cover important source and data contracts, but full browser end-to-end coverage is still limited.
 
 The intended analytics path is the existing Google Apps Script Web App writing append-only events to Google Sheet. Its script, endpoint, Sheet schema, and access settings are external and must be supplied before integration work.
@@ -83,8 +83,11 @@ Public smoke checks:
 /
 /issues
 /issues/2026-08
+/issues/2026-09
 /read/2026-08
 /read/2026-08?page=10
+/read/2026-09
+/read/2026-09?page=10
 /latest/outpatient
 /latest/shuttle
 /q/p-story

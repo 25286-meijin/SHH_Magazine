@@ -14,6 +14,7 @@ export function Cover({ issue, small = false }: { issue: Issue; small?: boolean 
           src={issue.cover_image}
           alt={`${issue.year} 年 ${issue.month} 月號封面`}
           fill
+          priority={!small}
           sizes={small ? "300px" : "(max-width: 760px) 84vw, 430px"}
           onError={() => setImageFailed(true)}
         />
