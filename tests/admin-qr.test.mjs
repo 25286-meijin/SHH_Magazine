@@ -162,6 +162,9 @@ test("admin uses the approved system name and shows only requested scan statisti
   assert.match(dashboard, /掃碼主題統計/);
   assert.match(dashboard, /掃碼區域統計/);
   assert.match(dashboard, /完整掃碼紀錄/);
+  assert.doesNotMatch(dashboard, /產生指定月份與頁碼的 QR Code，或依月份查看匿名 QR 導入紀錄。/);
+  assert.doesNotMatch(dashboard, /這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。/);
+  assert.match(dashboard, /時間顯示為 Asia\/Taipei。/);
   assert.doesNotMatch(dashboard, /有導入的主題數|有導入的區域數/);
   assert.doesNotMatch(dashboard.slice(dashboard.indexOf("完整掃碼紀錄")), /<th>QR ID<\/th>/);
   assert.match(dashboard, /right\.qr_entries - left\.qr_entries/);

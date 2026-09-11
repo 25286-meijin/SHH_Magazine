@@ -105,7 +105,7 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
 
   return <main className="admin-shell"><div className="wrap">
     <header className="admin-nav"><div className="logo"><span className="mark">SHH</span>雙和醫院公播掃碼追蹤系統 <span className="badge">ADMIN</span></div><button className="text-button" onClick={logout}>登出</button></header>
-    <div className="admin-title"><div><p className="eyebrow">SECURE QR ANALYTICS</p><h1>雙和醫院公播掃碼追蹤系統</h1><p>產生指定月份與頁碼的 QR Code，或依月份查看匿名 QR 導入紀錄。</p></div></div>
+    <div className="admin-title"><div><p className="eyebrow">SECURE QR ANALYTICS</p><h1>雙和醫院公播掃碼追蹤系統</h1></div></div>
 
     <nav className="admin-mode-nav" aria-label="後台功能">
       <button type="button" className={mode === "analytics" ? "selected" : ""} aria-pressed={mode === "analytics"} onClick={() => setMode("analytics")}>掃碼統計</button>
@@ -132,7 +132,7 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
     </> : <>
       <section className="admin-section"><p className="eyebrow">QR ENTRIES</p><h2>掃碼統計</h2><label className="analytics-filter">先選擇醫訊月份<select value={analyticsIssueId} onChange={event => void loadAnalytics(event.target.value)}><option value="">請選擇</option>{issues.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.title}</option>)}</select></label>
         {!analyticsLoaded ? <div className="panel empty-state">正在載入最新一期掃碼統計…</div> : <><div className="kpis compact-kpis"><article className="scan-total-card"><h2 className="statistics-section-title">QR Code 掃碼總次數</h2><strong className="scan-total-value"><span className="scan-total-number accent">{total}</span> 次</strong></article></div><div className="two-panels"><CountPanel title="掃碼主題統計" rows={sortCounts(topicCounts).map(item => [item.topic_title ?? "—", item.qr_entries])} /><CountPanel title="掃碼區域統計" rows={sortCounts(placementCounts).map(item => [item.placement_name ?? "—", item.qr_entries])} /></div>
-          <h2 className="statistics-section-title records-title">完整掃碼紀錄</h2><div className="table-wrap panel records-table-wrap"><div className="records-scroll"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div></div><p className="note">時間顯示為 Asia/Taipei。這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。</p></>}
+          <h2 className="statistics-section-title records-title">完整掃碼紀錄</h2><div className="table-wrap panel records-table-wrap"><div className="records-scroll"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div></div><p className="note">時間顯示為 Asia/Taipei。</p></>}
       </section>
     </>}
   </div></main>;
