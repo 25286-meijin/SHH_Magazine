@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 type IssueOption = { issue_id: string; title: string };
 type Topic = { id: string; issue_id: string; title: string; active: boolean };
 type Placement = { id: string; name: string; description: string | null; active: boolean };
-type QrRoute = { qr_id: string; created_at: string; topic: Topic; placement: Placement };
+type QrRoute = { qr_id: string; created_at: string; active: boolean; topic: Topic; placement: Placement };
 type Entry = { id: string; received_at_utc: string; topic_title: string; placement_name: string; issue_id: string; qr_id: string };
 type Count = { topic_title?: string; placement_name?: string; qr_entries: number };
 
@@ -55,6 +55,23 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
     } catch (error) { setMessage((error as Error).message); }
   }
 
+  async function updateCatalog(kind: "topic" | "placement", values: Record<string, unknown>) {
+    try {
+      setMessage("更新中…");
+      await api("/api/admin/catalog", { method: "PATCH", body: JSON.stringify({ kind, ...values }) });
+      await reload();
+    } catch (error) { setMessage((error as Error).message); }
+  }
+
+  async function deactivateRoute(qrId: string) {
+    if (!window.confirm("停用後，這張已印製的 QR Code 將無法再導向醫訊。確定要停用嗎？")) return;
+    try {
+      setMessage("正在停用 QR Code…");
+      await api("/api/admin/qr-routes", { method: "PATCH", body: JSON.stringify({ qr_id: qrId, active: false }) });
+      await reload();
+    } catch (error) { setMessage((error as Error).message); }
+  }
+
   async function logout() {
     await fetch("/api/admin/session", { method: "DELETE" });
     window.location.assign("/admin/login");
@@ -68,10 +85,10 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
     <section className="admin-section"><p className="eyebrow">STEP 1</p><h2>建立正式資料</h2><div className="admin-form-grid">
       <form className="panel admin-form" onSubmit={(event) => createCatalog(event, "topic")}><h3>醫訊主題</h3><label>所屬期號<select name="issue_id" required defaultValue=""><option value="" disabled>請選擇</option>{issues.map(i => <option key={i.issue_id} value={i.issue_id}>{i.issue_id}｜{i.title}</option>)}</select></label><label>正式主題名稱<input name="title" maxLength={160} required /></label><button className="button primary">新增主題</button></form>
       <form className="panel admin-form" onSubmit={(event) => createCatalog(event, "placement")}><h3>公播區域</h3><label>正式區域名稱<input name="name" maxLength={120} required /></label><label>位置說明（選填）<textarea name="description" maxLength={500} /></label><button className="button primary">新增區域</button></form>
-    </div></section>
+    </div><div className="management-grid"><TopicManager topics={topics} onSave={values => updateCatalog("topic", values)} /><PlacementManager placements={placements} onSave={values => updateCatalog("placement", values)} /></div></section>
 
     <section className="admin-section"><p className="eyebrow">STEP 2</p><h2>產生專屬 QR Code</h2><form className="panel admin-form qr-form" onSubmit={createRoute}><label>醫訊主題<select name="topic_id" required defaultValue=""><option value="" disabled>請選擇</option>{topics.filter(t => t.active).map(t => <option key={t.id} value={t.id}>{t.issue_id}｜{t.title}</option>)}</select></label><label>公播區域<select name="placement_id" required defaultValue=""><option value="" disabled>請選擇</option>{placements.filter(p => p.active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="button primary" disabled={!topics.length || !placements.length}>產生 QR Code</button></form>
-      <div className="table-wrap panel"><table><thead><tr><th>醫訊主題</th><th>公播區域</th><th>QR ID</th><th>下載</th></tr></thead><tbody>{routes.map(route => <tr key={route.qr_id}><td>{route.topic.title}</td><td>{route.placement.name}</td><td><code>{route.qr_id}</code></td><td><a className="download-link" href={`/api/admin/qr-routes/${route.qr_id}/image?format=png`}>PNG</a> <a className="download-link" href={`/api/admin/qr-routes/${route.qr_id}/image?format=svg`}>SVG</a></td></tr>)}{!routes.length && <tr><td colSpan={4}>尚未建立 QR Code。</td></tr>}</tbody></table></div>
+      <div className="table-wrap panel"><table><thead><tr><th>醫訊主題</th><th>公播區域</th><th>QR ID</th><th>狀態</th><th>下載／管理</th></tr></thead><tbody>{routes.map(route => <tr key={route.qr_id}><td>{route.topic.title}</td><td>{route.placement.name}</td><td><code>{route.qr_id}</code></td><td>{route.active ? "啟用" : "已停用"}</td><td>{route.active ? <><a className="download-link" href={`/api/admin/qr-routes/${route.qr_id}/image?format=png`}>PNG</a> <a className="download-link" href={`/api/admin/qr-routes/${route.qr_id}/image?format=svg`}>SVG</a> <button className="danger-link" type="button" onClick={() => deactivateRoute(route.qr_id)}>停用 QR</button></> : "保留歷史紀錄"}</td></tr>)}{!routes.length && <tr><td colSpan={5}>尚未建立 QR Code。</td></tr>}</tbody></table></div>
     </section>
 
     <section className="admin-section"><p className="eyebrow">QR ENTRIES</p><h2>QR 導入統計</h2><div className="kpis compact-kpis"><article><span>全部 QR 導入次數</span><strong className="accent">{total}</strong></article><article><span>主題數</span><strong>{topicCounts.length}</strong></article><article><span>有導入的區域數</span><strong>{placementCounts.length}</strong></article></div><div className="two-panels"><CountPanel title="各主題 QR 導入次數" rows={topicCounts.map(i => [i.topic_title ?? "—", i.qr_entries])} /><CountPanel title="各區域 QR 導入次數" rows={placementCounts.map(i => [i.placement_name ?? "—", i.qr_entries])} /></div></section>
@@ -81,6 +98,26 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
 
 function CountPanel({ title, rows }: { title: string; rows: [string, number][] }) {
   return <div className="panel count-panel"><h3>{title}</h3>{rows.length ? rows.map(([label, value]) => <div className="count-row" key={label}><span>{label}</span><strong>{value}</strong></div>) : <p>目前沒有紀錄。</p>}</div>;
+}
+
+function TopicManager({ topics, onSave }: { topics: Topic[]; onSave: (values: Record<string, unknown>) => Promise<void> }) {
+  return <div className="panel catalog-manager"><h3>編輯主題</h3>{topics.length ? topics.map(topic => <TopicRow key={topic.id} topic={topic} onSave={onSave} />) : <p>尚未建立主題。</p>}</div>;
+}
+
+function TopicRow({ topic, onSave }: { topic: Topic; onSave: (values: Record<string, unknown>) => Promise<void> }) {
+  const [title, setTitle] = useState(topic.title);
+  return <form className="catalog-row" onSubmit={event => { event.preventDefault(); void onSave({ id: topic.id, title, active: topic.active }); }}><span>{topic.issue_id}</span><input aria-label={`${topic.issue_id} 主題名稱`} value={title} maxLength={160} required onChange={event => setTitle(event.target.value)} /><span className={topic.active ? "status-active" : "status-inactive"}>{topic.active ? "啟用" : "已封存"}</span><button className="small-button" type="submit">儲存</button><button className="small-button secondary" type="button" onClick={() => void onSave({ id: topic.id, title, active: !topic.active })}>{topic.active ? "封存" : "重新啟用"}</button></form>;
+}
+
+function PlacementManager({ placements, onSave }: { placements: Placement[]; onSave: (values: Record<string, unknown>) => Promise<void> }) {
+  return <div className="panel catalog-manager"><h3>編輯區域</h3>{placements.length ? placements.map(placement => <PlacementRow key={placement.id} placement={placement} onSave={onSave} />) : <p>尚未建立區域。</p>}</div>;
+}
+
+function PlacementRow({ placement, onSave }: { placement: Placement; onSave: (values: Record<string, unknown>) => Promise<void> }) {
+  const [name, setName] = useState(placement.name);
+  const [description, setDescription] = useState(placement.description ?? "");
+  const values = { id: placement.id, name, description };
+  return <form className="catalog-row placement-row" onSubmit={event => { event.preventDefault(); void onSave({ ...values, active: placement.active }); }}><input aria-label="區域名稱" value={name} maxLength={120} required onChange={event => setName(event.target.value)} /><input aria-label={`${placement.name} 位置說明`} value={description} maxLength={500} placeholder="位置說明" onChange={event => setDescription(event.target.value)} /><span className={placement.active ? "status-active" : "status-inactive"}>{placement.active ? "啟用" : "已封存"}</span><button className="small-button" type="submit">儲存</button><button className="small-button secondary" type="button" onClick={() => void onSave({ ...values, active: !placement.active })}>{placement.active ? "封存" : "重新啟用"}</button></form>;
 }
 
 async function api(url: string, init?: RequestInit) {

@@ -69,3 +69,27 @@ test("public client events cannot choose their own topic or placement", async ()
   assert.match(tracking, /topic_id: entry\.topic_id/);
   assert.match(tracking, /placement_id: entry\.placement_id/);
 });
+
+test("daily catalog management is available through protected admin APIs", async () => {
+  const catalog = await source("app/api/admin/catalog/route.ts");
+
+  assert.match(catalog, /export async function PATCH/);
+  assert.match(catalog, /requireAdmin\(/);
+  assert.match(catalog, /\.from\("qr_topics"\)\.update/);
+  assert.match(catalog, /\.from\("placements"\)\.update/);
+  assert.doesNotMatch(catalog, /\.delete\(/);
+});
+
+test("QR routes can be deactivated without deleting tracking history", async () => {
+  const [routeApi, dashboard] = await Promise.all([
+    source("app/api/admin/qr-routes/route.ts"),
+    source("components/AdminDashboard.tsx"),
+  ]);
+
+  assert.match(routeApi, /export async function PATCH/);
+  assert.match(routeApi, /deactivated_at/);
+  assert.doesNotMatch(routeApi, /\.delete\(/);
+  assert.match(dashboard, /停用 QR/);
+  assert.match(dashboard, /編輯主題/);
+  assert.match(dashboard, /編輯區域/);
+});

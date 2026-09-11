@@ -54,3 +54,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const { supabase } = await requireAdmin();
+    const body = await request.json() as Record<string, unknown>;
+    const qrId = typeof body.qr_id === "string" ? body.qr_id : "";
+    if (!/^qr_[A-Za-z0-9_-]{20,80}$/.test(qrId) || body.active !== false) {
+      return NextResponse.json({ ok: false, error: "只能停用有效的 QR Code" }, { status: 400 });
+    }
+
+    const { data, error } = await supabase.from("qr_routes").update({
+      active: false,
+      deactivated_at: new Date().toISOString(),
+    }).eq("qr_id", qrId).eq("active", true).select("qr_id,active,deactivated_at").maybeSingle();
+    if (error) throw error;
+    if (!data) return NextResponse.json({ ok: false, error: "找不到啟用中的 QR Code" }, { status: 404 });
+    return NextResponse.json({ ok: true, route: data });
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+}

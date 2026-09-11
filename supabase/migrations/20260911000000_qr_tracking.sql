@@ -96,10 +96,11 @@ create or replace function public.qr_topic_counts()
 returns table(topic_id uuid, topic_title text, qr_entries bigint)
 language sql stable security invoker set search_path = ''
 as $$
-  select e.topic_id, e.topic_title, count(*)
+  select e.topic_id, coalesce(t.title, e.topic_title), count(*)
   from public.qr_events e
+  left join public.qr_topics t on t.id = e.topic_id
   where e.event_type = 'qr_entry'
-  group by e.topic_id, e.topic_title
+  group by e.topic_id, coalesce(t.title, e.topic_title)
   order by count(*) desc
 $$;
 
@@ -107,10 +108,11 @@ create or replace function public.qr_placement_counts()
 returns table(placement_id uuid, placement_name text, qr_entries bigint)
 language sql stable security invoker set search_path = ''
 as $$
-  select e.placement_id, e.placement_name, count(*)
+  select e.placement_id, coalesce(p.name, e.placement_name), count(*)
   from public.qr_events e
+  left join public.placements p on p.id = e.placement_id
   where e.event_type = 'qr_entry'
-  group by e.placement_id, e.placement_name
+  group by e.placement_id, coalesce(p.name, e.placement_name)
   order by count(*) desc
 $$;
 

@@ -58,6 +58,16 @@ SUPABASE_SECRET_KEY=<測試專案 server-only secret key>
 3. 選擇主題與區域，產生專屬 QR Code。
 4. 下載 PNG 或 SVG 製作公播圖卡。
 
+日常管理都在網站後台完成，不需要再進入 Supabase：
+
+- 編輯、封存或重新啟用醫訊主題。
+- 編輯、封存或重新啟用公播區域。
+- 建立主題與區域的 QR Code，下載 PNG／SVG。
+- 停用不再使用的 QR Code；歷史掃碼紀錄不會被刪除。
+- 查看最近掃碼時間，以及依主題、區域彙總的 QR 導入次數。
+
+封存主題或區域只會停止它出現在新 QR Code 的選單中，不會讓已印製的 QR Code 失效。若要停用已印製的 QR Code，必須在 QR 清單另外執行「停用 QR」。
+
 同一主題在不同區域會產生不同的永久 QR ID。系統不允許同一組啟用中的主題／區域重複建立，也不會把既有 QR ID 改派給其他資料。
 
 正式圖卡的 QR Code 應使用經核准的永久正式網域，不應使用短期 Vercel Preview 網址。
@@ -72,4 +82,3 @@ SUPABASE_SECRET_KEY=<測試專案 server-only secret key>
 - 模擬 `qr_events` 寫入失敗時，醫訊仍可開啟。
 - 後台時間以 Asia/Taipei 顯示，並使用「QR 導入次數」而非「掃描率」。
 - 以 375px、390px 驗收公開閱讀與管理操作。
-
