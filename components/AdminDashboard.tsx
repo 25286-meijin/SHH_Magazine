@@ -11,11 +11,11 @@ type Entry = { id: string; received_at_utc: string; topic_title: string; placeme
 type Count = { topic_title?: string; placement_name?: string; qr_entries: number };
 
 export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
-  const [mode, setMode] = useState<"qr" | "analytics">("qr");
+  const [mode, setMode] = useState<"qr" | "analytics">("analytics");
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [routes, setRoutes] = useState<QrRoute[]>([]);
   const [createdQrId, setCreatedQrId] = useState("");
-  const [analyticsIssueId, setAnalyticsIssueId] = useState("");
+  const [analyticsIssueId, setAnalyticsIssueId] = useState(issues[0]?.issue_id ?? "");
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [topicCounts, setTopicCounts] = useState<Count[]>([]);
@@ -33,27 +33,7 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
     setMessage("");
   }, []);
 
-  useEffect(() => {
-    void reloadCatalog().catch((error: Error) => setMessage(error.message));
-  }, [reloadCatalog]);
-
-  async function createRoute(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    try {
-      setMessage("正在產生 QR Code…");
-      const result = await api("/api/admin/qr-routes", {
-        method: "POST",
-        body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))),
-      });
-      setCreatedQrId(result.route.qr_id);
-      await reloadCatalog();
-      setMessage("QR Code 已產生，可在下方預覽與下載。");
-    } catch (error) {
-      setMessage((error as Error).message);
-    }
-  }
-
-  async function loadAnalytics(issueId: string) {
+  const loadAnalytics = useCallback(async (issueId: string) => {
     setAnalyticsIssueId(issueId);
     if (!issueId) {
       setAnalyticsLoaded(false);
@@ -74,6 +54,31 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
       setMessage("");
     } catch (error) {
       setAnalyticsLoaded(false);
+      setMessage((error as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadCatalog().catch((error: Error) => setMessage(error.message));
+  }, [reloadCatalog]);
+
+  useEffect(() => {
+    const latestIssueId = issues[0]?.issue_id;
+    if (latestIssueId) void loadAnalytics(latestIssueId);
+  }, [issues, loadAnalytics]);
+
+  async function createRoute(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setMessage("正在產生 QR Code…");
+      const result = await api("/api/admin/qr-routes", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))),
+      });
+      setCreatedQrId(result.route.qr_id);
+      await reloadCatalog();
+      setMessage("QR Code 已產生，可在下方預覽與下載。");
+    } catch (error) {
       setMessage((error as Error).message);
     }
   }
@@ -103,8 +108,8 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
     <div className="admin-title"><div><p className="eyebrow">SECURE QR ANALYTICS</p><h1>雙和醫院公播掃碼追蹤系統</h1><p>產生指定月份與頁碼的 QR Code，或依月份查看匿名 QR 導入紀錄。</p></div></div>
 
     <nav className="admin-mode-nav" aria-label="後台功能">
-      <button type="button" className={mode === "qr" ? "selected" : ""} aria-pressed={mode === "qr"} onClick={() => setMode("qr")}>QR Code 管理</button>
       <button type="button" className={mode === "analytics" ? "selected" : ""} aria-pressed={mode === "analytics"} onClick={() => setMode("analytics")}>掃碼統計</button>
+      <button type="button" className={mode === "qr" ? "selected" : ""} aria-pressed={mode === "qr"} onClick={() => setMode("qr")}>QR Code 管理</button>
     </nav>
     {message && <p className="admin-message" role="status">{message}</p>}
 
@@ -126,8 +131,8 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
 
     </> : <>
       <section className="admin-section"><p className="eyebrow">QR ENTRIES</p><h2>掃碼統計</h2><label className="analytics-filter">先選擇醫訊月份<select value={analyticsIssueId} onChange={event => void loadAnalytics(event.target.value)}><option value="">請選擇</option>{issues.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.title}</option>)}</select></label>
-        {!analyticsLoaded ? <div className="panel empty-state">請先選擇要查看的醫訊月份。</div> : <><div className="kpis compact-kpis"><article><h2 className="statistics-section-title">QR Code 掃碼總次數</h2><strong className="accent">{total}</strong></article></div><div className="two-panels"><CountPanel title="掃碼主題統計" rows={sortCounts(topicCounts).map(item => [item.topic_title ?? "—", item.qr_entries])} /><CountPanel title="掃碼區域統計" rows={sortCounts(placementCounts).map(item => [item.placement_name ?? "—", item.qr_entries])} /></div>
-          <h2 className="statistics-section-title records-title">完整掃碼紀錄</h2><div className="table-wrap panel"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div><p className="note">時間顯示為 Asia/Taipei。這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。</p></>}
+        {!analyticsLoaded ? <div className="panel empty-state">正在載入最新一期掃碼統計…</div> : <><div className="kpis compact-kpis"><article className="scan-total-card"><h2 className="statistics-section-title">QR Code 掃碼總次數</h2><strong className="scan-total-value accent"><span className="scan-total-number">{total}</span> 次</strong></article></div><div className="two-panels"><CountPanel title="掃碼主題統計" rows={sortCounts(topicCounts).map(item => [item.topic_title ?? "—", item.qr_entries])} /><CountPanel title="掃碼區域統計" rows={sortCounts(placementCounts).map(item => [item.placement_name ?? "—", item.qr_entries])} /></div>
+          <h2 className="statistics-section-title records-title">完整掃碼紀錄</h2><div className="table-wrap panel records-table-wrap"><div className="records-scroll"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div></div><p className="note">時間顯示為 Asia/Taipei。這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。</p></>}
       </section>
     </>}
   </div></main>;

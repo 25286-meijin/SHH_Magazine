@@ -181,6 +181,31 @@ test("scan statistic cards share title styling and scroll after three rows", asy
   assert.match(styles, /\.count-list\s*\{[^}]*overflow-y:\s*auto/s);
 });
 
+test("admin opens the latest issue analytics with compact scrolling statistics", async () => {
+  const [dashboard, styles, content] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/globals.css"),
+    source("lib/content.ts"),
+  ]);
+  const navigation = dashboard.slice(
+    dashboard.indexOf('<nav className="admin-mode-nav"'),
+    dashboard.indexOf("</nav>"),
+  );
+
+  assert.match(dashboard, /useState<"qr" \| "analytics">\("analytics"\)/);
+  assert.match(dashboard, /issues\[0\]\?\.issue_id/);
+  assert.match(dashboard, /loadAnalytics\(latestIssueId\)/);
+  assert.ok(navigation.indexOf("掃碼統計") < navigation.indexOf("QR Code 管理"));
+  assert.match(content, /b\.publish_date\.localeCompare\(a\.publish_date\)/);
+  assert.match(dashboard, /scan-total-card/);
+  assert.match(dashboard, /scan-total-number/);
+  assert.match(dashboard, /records-table-wrap/);
+  assert.match(dashboard, /records-scroll/);
+  assert.match(styles, /\.count-panel\s*\{[^}]*display:\s*grid/s);
+  assert.match(styles, /\.records-scroll\s*\{[^}]*max-height:\s*calc\(46px\s*\+\s*5\s*\*\s*48px\)/s);
+  assert.match(styles, /\.records-scroll\s*\{[^}]*overflow-y:\s*auto/s);
+});
+
 test("QR images support protected inline preview and explicit downloads", async () => {
   const [dashboard, imageRoute] = await Promise.all([
     source("components/AdminDashboard.tsx"),
