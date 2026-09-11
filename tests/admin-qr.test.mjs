@@ -70,14 +70,26 @@ test("public client events cannot choose their own topic or placement", async ()
   assert.match(tracking, /placement_id: entry\.placement_id/);
 });
 
-test("daily catalog management is available through protected admin APIs", async () => {
-  const catalog = await source("app/api/admin/catalog/route.ts");
+test("admin offers only the approved fixed placements and no placement manager", async () => {
+  const [placements, catalog, dashboard, migration] = await Promise.all([
+    source("lib/qr-placements.ts"),
+    source("app/api/admin/catalog/route.ts"),
+    source("components/AdminDashboard.tsx"),
+    source("supabase/migrations/20260911020000_fixed_placements.sql"),
+  ]);
+  const approved = [
+    "1F大廳", "2F大電視牆", "1F關防", "B基地美食廣場", "空橋直式",
+    "雙和故事館", "骨科", "腎臟+泌尿科", "綜合檢查中心",
+  ];
 
-  assert.match(catalog, /export async function PATCH/);
+  for (const name of approved) {
+    assert.match(placements, new RegExp(name.replace("+", "\\+")));
+    assert.match(migration, new RegExp(name.replace("+", "\\+")));
+  }
+  assert.match(catalog, /FIXED_QR_PLACEMENTS/);
   assert.match(catalog, /requireAdmin\(/);
-  assert.match(catalog, /\.from\("qr_topics"\)\.update/);
-  assert.match(catalog, /\.from\("placements"\)\.update/);
-  assert.doesNotMatch(catalog, /\.delete\(/);
+  assert.doesNotMatch(dashboard, /公播區域管理|新增公播區域|編輯區域/);
+  assert.doesNotMatch(migration, /delete\s+from|drop\s+(table|column)|truncate/i);
 });
 
 test("QR routes can be deactivated without deleting tracking history", async () => {
@@ -90,7 +102,6 @@ test("QR routes can be deactivated without deleting tracking history", async () 
   assert.match(routeApi, /deactivated_at/);
   assert.doesNotMatch(routeApi, /\.delete\(/);
   assert.match(dashboard, /停用 QR/);
-  assert.match(dashboard, /編輯區域/);
 });
 
 test("QR creation accepts an existing issue, an inline topic title, a page, and a placement", async () => {
@@ -134,6 +145,27 @@ test("admin separates QR management from issue-filtered analytics", async () => 
   assert.match(analytics, /\.eq\("issue_id", issueId\)/);
   assert.match(analytics, /qr_topic_counts_by_issue/);
   assert.match(analytics, /qr_placement_counts_by_issue/);
+});
+
+test("admin uses the approved system name and shows only requested scan statistics", async () => {
+  const [page, login, dashboard, styles] = await Promise.all([
+    source("app/admin/page.tsx"),
+    source("app/admin/login/page.tsx"),
+    source("components/AdminDashboard.tsx"),
+    source("app/globals.css"),
+  ]);
+
+  assert.match(page, /雙和醫院公播掃碼追蹤系統/);
+  assert.match(login, /雙和醫院公播掃碼追蹤系統/);
+  assert.match(dashboard, /雙和醫院公播掃碼追蹤系統/);
+  assert.match(dashboard, /QR Code 掃碼總次數/);
+  assert.match(dashboard, /掃碼主題統計/);
+  assert.match(dashboard, /掃碼區域統計/);
+  assert.match(dashboard, /完整掃碼紀錄/);
+  assert.doesNotMatch(dashboard, /有導入的主題數|有導入的區域數/);
+  assert.doesNotMatch(dashboard.slice(dashboard.indexOf("完整掃碼紀錄")), /<th>QR ID<\/th>/);
+  assert.match(dashboard, /right\.qr_entries - left\.qr_entries/);
+  assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.admin-nav \.logo/);
 });
 
 test("QR images support protected inline preview and explicit downloads", async () => {

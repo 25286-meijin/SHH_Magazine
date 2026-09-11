@@ -23,7 +23,7 @@ export default function AdminLoginPage() {
   }
 
   return <main className="admin-login"><form onSubmit={submit} className="login-card">
-    <div className="logo"><span className="mark">SHH</span>雙和醫訊 <span className="badge">ADMIN</span></div>
+    <div className="logo"><span className="mark">SHH</span>雙和醫院公播掃碼追蹤系統 <span className="badge">ADMIN</span></div>
     <h1>管理員登入</h1>
     <p>只有經核准並具有 admin 角色的帳號可以查看 QR 紀錄與統計。</p>
     <label>電子郵件<input name="email" type="email" autoComplete="username" required /></label>
@@ -32,4 +32,3 @@ export default function AdminLoginPage() {
     <button className="button primary" disabled={busy}>{busy ? "登入中…" : "登入"}</button>
   </form></main>;
 }
-
