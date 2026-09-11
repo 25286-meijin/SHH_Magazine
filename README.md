@@ -1,5 +1,7 @@
 # SHH Magazine
 
+Supabase QR Code 管理、權限及測試環境設定請參考 [docs/SUPABASE_QR_SETUP.md](docs/SUPABASE_QR_SETUP.md)。
+
 雙和醫訊數位閱讀暨 QR 成效追蹤平台（Pilot）。
 
 ## Source of truth

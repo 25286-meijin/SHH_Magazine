@@ -1,5 +1,16 @@
 # Action Items
 
+## Supabase QR 管理與統計啟用前
+
+- [ ] 院方確認可使用 Supabase、資料存放區域與資安規範。
+- [ ] 專案負責人建立獨立測試專案並執行 QR tracking migration。
+- [ ] 提供經核准的管理員電子郵件，並由 Owner 設定 `app_metadata.role=admin`。
+- [ ] 在本機測試環境設定 Supabase URL、publishable key 與 server-only secret；不可提交 Git。
+- [ ] 提供正式醫訊主題名稱及 8–9 個公播區域名稱；不可沿用 Demo 名稱。
+- [ ] 確認永久正式網站網域後，才可下載並印製正式 QR 圖卡。
+- [ ] 完成匿名 RLS、管理員權限、寫入失敗容錯及 375/390px 實機驗收。
+- [ ] 正式上線前另開升級工作，將 Next.js 14 更新至仍受支援且已修補安全公告的版本；不可直接執行破壞性 `npm audit fix --force`。
+
 Last updated: 2026-09-08
 
 ## MVP completed

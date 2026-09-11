@@ -1,5 +1,7 @@
 .next/
 node_modules/
+.pnpm-store/
 .env.local
 *.log
+*.tsbuildinfo
 public/pdf.worker.min.mjs

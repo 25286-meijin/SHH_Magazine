@@ -30,9 +30,11 @@ test("registration destinations use the official HTTPS host", async () => {
   }
 });
 
-test("admin authentication fails closed when credentials are absent", async () => {
+test("admin authentication fails closed when Supabase is absent", async () => {
   const middleware = await readFile(new URL("../middleware.ts", import.meta.url), "utf8");
-  assert.match(middleware, /if \(!user \|\| !password\)[\s\S]*status: 503/);
+  assert.match(middleware, /if \(!config\)[\s\S]*status: 503/);
+  assert.match(middleware, /app_metadata\.role === "admin"/);
+  assert.match(middleware, /"\/api\/admin\/:path\*"/);
   assert.doesNotMatch(middleware, /localStorage|searchParams.*password/);
 });
 

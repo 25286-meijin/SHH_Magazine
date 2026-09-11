@@ -1,39 +1,38 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
-function decodeCredentials(header: string | null): [string, string] | null {
-  if (!header?.startsWith("Basic ")) return null;
-
-  try {
-    const decoded = atob(header.slice(6));
-    const separator = decoded.indexOf(":");
-    if (separator < 0) return null;
-    return [decoded.slice(0, separator), decoded.slice(separator + 1)];
-  } catch {
-    return null;
-  }
-}
-
-export function middleware(request: NextRequest) {
-  const user = process.env.ADMIN_USERNAME;
-  const password = process.env.ADMIN_PASSWORD;
-
-  // Fail closed: an unconfigured deployment must never expose the dashboard.
-  if (!user || !password) {
-    return new NextResponse("管理介面尚未設定存取驗證。", { status: 503 });
+export async function middleware(request: NextRequest) {
+  const config = getSupabasePublicConfig();
+  if (!config) {
+    return new NextResponse("管理介面尚未設定 Supabase 驗證。", { status: 503 });
   }
 
-  const credentials = decodeCredentials(request.headers.get("authorization"));
-  if (credentials?.[0] === user && credentials[1] === password) {
-    return NextResponse.next();
-  }
-
-  return new NextResponse("需要管理者驗證", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="SHH Magazine Admin", charset="UTF-8"',
-      "Cache-Control": "no-store",
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(config.url, config.publishableKey, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (items) => {
+        items.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+      },
     },
   });
+
+  const path = request.nextUrl.pathname;
+  if (path === "/admin/login" || path === "/api/admin/session") return response;
+
+  const { data } = await supabase.auth.getUser();
+  if (data.user?.app_metadata.role === "admin") return response;
+
+  if (path.startsWith("/api/")) {
+    return NextResponse.json({ ok: false, error: "需要管理員登入" }, { status: 401 });
+  }
+  const login = request.nextUrl.clone();
+  login.pathname = "/admin/login";
+  login.search = "";
+  return NextResponse.redirect(login);
 }
 
-export const config = { matcher: ["/admin/:path*"] };
+export const config = { matcher: ["/admin/:path*", "/api/admin/:path*"] };
