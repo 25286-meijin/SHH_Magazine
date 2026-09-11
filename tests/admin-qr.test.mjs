@@ -206,6 +206,21 @@ test("admin opens the latest issue analytics with compact scrolling statistics",
   assert.match(styles, /\.records-scroll\s*\{[^}]*overflow-y:\s*auto/s);
 });
 
+test("scan total uses one text size and QR history scrolls after ten rows", async () => {
+  const [dashboard, styles] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/globals.css"),
+  ]);
+
+  assert.match(dashboard, /scan-total-value"><span className="scan-total-number accent">\{total\}<\/span> 次/);
+  assert.match(styles, /\.scan-total-number\s*\{[^}]*font-size:\s*inherit/s);
+  assert.match(dashboard, /qr-routes-table-wrap/);
+  assert.match(dashboard, /qr-routes-scroll/);
+  assert.match(styles, /\.scan-total-card \.scan-total-number\s*\{[^}]*color:\s*var\(--brand\)/s);
+  assert.match(styles, /\.qr-routes-scroll\s*\{[^}]*max-height:\s*calc\(46px\s*\+\s*10\s*\*\s*74px\)/s);
+  assert.match(styles, /\.qr-routes-scroll\s*\{[^}]*overflow-y:\s*auto/s);
+});
+
 test("QR images support protected inline preview and explicit downloads", async () => {
   const [dashboard, imageRoute] = await Promise.all([
     source("components/AdminDashboard.tsx"),
