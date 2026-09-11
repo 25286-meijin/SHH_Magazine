@@ -168,6 +168,19 @@ test("admin uses the approved system name and shows only requested scan statisti
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.admin-nav \.logo/);
 });
 
+test("scan statistic cards share title styling and scroll after three rows", async () => {
+  const [dashboard, styles] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/globals.css"),
+  ]);
+
+  assert.match(dashboard, /statistics-section-title/);
+  assert.match(dashboard, /count-list/);
+  assert.match(styles, /\.statistics-section-title\s*\{/);
+  assert.match(styles, /\.count-list\s*\{[^}]*max-height:\s*calc\(3\s*\*\s*48px\)/s);
+  assert.match(styles, /\.count-list\s*\{[^}]*overflow-y:\s*auto/s);
+});
+
 test("QR images support protected inline preview and explicit downloads", async () => {
   const [dashboard, imageRoute] = await Promise.all([
     source("components/AdminDashboard.tsx"),

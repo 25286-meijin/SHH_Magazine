@@ -126,15 +126,15 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
 
     </> : <>
       <section className="admin-section"><p className="eyebrow">QR ENTRIES</p><h2>掃碼統計</h2><label className="analytics-filter">先選擇醫訊月份<select value={analyticsIssueId} onChange={event => void loadAnalytics(event.target.value)}><option value="">請選擇</option>{issues.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.title}</option>)}</select></label>
-        {!analyticsLoaded ? <div className="panel empty-state">請先選擇要查看的醫訊月份。</div> : <><div className="kpis compact-kpis"><article><span>QR Code 掃碼總次數</span><strong className="accent">{total}</strong></article></div><div className="two-panels"><CountPanel title="掃碼主題統計" rows={sortCounts(topicCounts).map(item => [item.topic_title ?? "—", item.qr_entries])} /><CountPanel title="掃碼區域統計" rows={sortCounts(placementCounts).map(item => [item.placement_name ?? "—", item.qr_entries])} /></div>
-          <h2 className="records-title">完整掃碼紀錄</h2><div className="table-wrap panel"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div><p className="note">時間顯示為 Asia/Taipei。這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。</p></>}
+        {!analyticsLoaded ? <div className="panel empty-state">請先選擇要查看的醫訊月份。</div> : <><div className="kpis compact-kpis"><article><h2 className="statistics-section-title">QR Code 掃碼總次數</h2><strong className="accent">{total}</strong></article></div><div className="two-panels"><CountPanel title="掃碼主題統計" rows={sortCounts(topicCounts).map(item => [item.topic_title ?? "—", item.qr_entries])} /><CountPanel title="掃碼區域統計" rows={sortCounts(placementCounts).map(item => [item.placement_name ?? "—", item.qr_entries])} /></div>
+          <h2 className="statistics-section-title records-title">完整掃碼紀錄</h2><div className="table-wrap panel"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div><p className="note">時間顯示為 Asia/Taipei。這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。</p></>}
       </section>
     </>}
   </div></main>;
 }
 
 function CountPanel({ title, rows }: { title: string; rows: [string, number][] }) {
-  return <div className="panel count-panel"><h3>{title}</h3>{rows.length ? rows.map(([label, value]) => <div className="count-row" key={label}><span>{label}</span><strong>{value} 次</strong></div>) : <p>目前沒有紀錄。</p>}</div>;
+  return <div className="panel count-panel"><h2 className="statistics-section-title">{title}</h2>{rows.length ? <div className="count-list">{rows.map(([label, value]) => <div className="count-row" key={label}><span>{label}</span><strong>{value} 次</strong></div>)}</div> : <p>目前沒有紀錄。</p>}</div>;
 }
 
 function sortCounts(rows: Count[]) {
