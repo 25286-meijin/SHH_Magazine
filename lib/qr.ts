@@ -4,7 +4,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase/server";
 export type StoredQrRoute = {
   qr_id: string;
   destination_path: string;
-  topic: { id: string; issue_id: string; title: string };
+  topic: { id: string; issue_id: string; title: string; page_number: number | null };
   placement: { id: string; name: string };
 };
 
@@ -33,7 +33,7 @@ export async function getStoredQrRoute(qrId: string): Promise<StoredQrRoute | nu
 
   const { data, error } = await supabase
     .from("qr_routes")
-    .select("qr_id,destination_path,topic:qr_topics(id,issue_id,title),placement:placements(id,name)")
+    .select("qr_id,destination_path,topic:qr_topics(id,issue_id,title,page_number),placement:placements(id,name)")
     .eq("qr_id", qrId)
     .eq("active", true)
     .abortSignal(AbortSignal.timeout(1_200))
@@ -61,4 +61,3 @@ export async function recordQrEntry(route: StoredQrRoute, entryId: string, at: s
   }).abortSignal(AbortSignal.timeout(800));
   if (error) throw error;
 }
-

@@ -90,6 +90,69 @@ test("QR routes can be deactivated without deleting tracking history", async () 
   assert.match(routeApi, /deactivated_at/);
   assert.doesNotMatch(routeApi, /\.delete\(/);
   assert.match(dashboard, /停用 QR/);
-  assert.match(dashboard, /編輯主題/);
   assert.match(dashboard, /編輯區域/);
+});
+
+test("QR creation accepts an existing issue, an inline topic title, a page, and a placement", async () => {
+  const [routeApi, dashboard] = await Promise.all([
+    source("app/api/admin/qr-routes/route.ts"),
+    source("components/AdminDashboard.tsx"),
+  ]);
+
+  assert.match(routeApi, /getIssue\(issueId\)/);
+  assert.match(routeApi, /page_number/);
+  assert.match(routeApi, /title/);
+  assert.match(routeApi, /`\/read\/\$\{issueId\}`/);
+  assert.match(dashboard, /name="issue_id"/);
+  assert.match(dashboard, /name="title"/);
+  assert.match(dashboard, /name="page_number"/);
+  assert.match(dashboard, /導入醫訊頁碼/);
+});
+
+test("stored page numbers are added to the direct reader redirect without changing old routes", async () => {
+  const [qrLibrary, qrRoute] = await Promise.all([
+    source("lib/qr.ts"),
+    source("app/q/[qrId]/route.ts"),
+  ]);
+
+  assert.match(qrLibrary, /page_number/);
+  assert.match(qrRoute, /storedRoute\.topic\.page_number/);
+  assert.match(qrRoute, /searchParams\.set\("page"/);
+  assert.match(qrRoute, /if \(storedRoute\.topic\.page_number\)/);
+});
+
+test("admin separates QR management from issue-filtered analytics", async () => {
+  const [dashboard, analytics] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/api/admin/analytics/route.ts"),
+  ]);
+
+  assert.match(dashboard, /QR Code 管理/);
+  assert.match(dashboard, /掃碼統計/);
+  assert.match(dashboard, /analyticsIssueId/);
+  assert.match(analytics, /searchParams\.get\("issue_id"\)/);
+  assert.match(analytics, /\.eq\("issue_id", issueId\)/);
+  assert.match(analytics, /qr_topic_counts_by_issue/);
+  assert.match(analytics, /qr_placement_counts_by_issue/);
+});
+
+test("QR images support protected inline preview and explicit downloads", async () => {
+  const [dashboard, imageRoute] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/api/admin/qr-routes/[qrId]/image/route.ts"),
+  ]);
+
+  assert.match(dashboard, /qr-preview/);
+  assert.match(imageRoute, /searchParams\.get\("download"\)/);
+  assert.match(imageRoute, /inline/);
+  assert.match(imageRoute, /attachment/);
+});
+
+test("the additive migration preserves old QR routes while adding page and monthly reports", async () => {
+  const migration = await source("supabase/migrations/20260911010000_qr_page_routing.sql");
+
+  assert.match(migration, /alter table public\.qr_topics[\s\S]*add column if not exists page_number/i);
+  assert.match(migration, /qr_topic_counts_by_issue/);
+  assert.match(migration, /qr_placement_counts_by_issue/);
+  assert.doesNotMatch(migration, /drop\s+(table|column)|delete\s+from|truncate/i);
 });

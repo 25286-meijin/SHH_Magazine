@@ -17,6 +17,9 @@ export async function GET(
     const qrEntryAtUtc = new Date().toISOString();
     await recordQrEntry(storedRoute, entryId, qrEntryAtUtc).catch(() => undefined);
     const target = new URL(storedRoute.destination_path, request.url);
+    if (storedRoute.topic.page_number) {
+      target.searchParams.set("page", String(storedRoute.topic.page_number));
+    }
     target.searchParams.set("entry_id", entryId);
     return NextResponse.redirect(target, 302);
   }

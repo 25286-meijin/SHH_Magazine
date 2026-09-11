@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminErrorResponse, requireAdmin } from "@/lib/admin-auth";
+import { getIssue } from "@/lib/content";
 import { createOpaqueQrId, getPublicSiteUrl } from "@/lib/qr";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -9,7 +10,7 @@ export async function GET() {
     const { supabase } = await requireAdmin();
     const { data, error } = await supabase
       .from("qr_routes")
-      .select("id,qr_id,destination_path,active,created_at,topic:qr_topics(id,issue_id,title),placement:placements(id,name)")
+      .select("id,qr_id,destination_path,active,created_at,topic:qr_topics(id,issue_id,title,page_number),placement:placements(id,name)")
       .order("created_at", { ascending: false });
     if (error) throw error;
     return NextResponse.json({ ok: true, routes: data, siteUrl: getPublicSiteUrl() });
@@ -22,24 +23,29 @@ export async function POST(request: NextRequest) {
   try {
     const { supabase, user } = await requireAdmin();
     const body = await request.json() as Record<string, unknown>;
-    const topicId = typeof body.topic_id === "string" ? body.topic_id : "";
+    const issueId = cleanText(body.issue_id, 32);
+    const title = cleanText(body.title, 160);
+    const pageNumber = positiveInteger(body.page_number);
     const placementId = typeof body.placement_id === "string" ? body.placement_id : "";
-    if (!uuidPattern.test(topicId) || !uuidPattern.test(placementId)) {
-      return NextResponse.json({ ok: false, error: "請選擇有效的醫訊主題與公播區域" }, { status: 400 });
+    if (!getIssue(issueId) || !title || !pageNumber || !uuidPattern.test(placementId)) {
+      return NextResponse.json({ ok: false, error: "請選擇有效月份、填寫主題與頁碼、並選擇公播區域" }, { status: 400 });
     }
 
-    const [{ data: topic }, { data: placement }] = await Promise.all([
-      supabase.from("qr_topics").select("id,destination_path").eq("id", topicId).eq("active", true).maybeSingle(),
-      supabase.from("placements").select("id").eq("id", placementId).eq("active", true).maybeSingle(),
-    ]);
-    if (!topic || !placement) {
-      return NextResponse.json({ ok: false, error: "主題或區域不存在，或目前未啟用" }, { status: 400 });
+    const { data: placement } = await supabase
+      .from("placements").select("id").eq("id", placementId).eq("active", true).maybeSingle();
+    if (!placement) {
+      return NextResponse.json({ ok: false, error: "公播區域不存在，或目前未啟用" }, { status: 400 });
     }
+
+    const destinationPath = `/read/${issueId}`;
+    const topic = await findOrCreateTopic(supabase, user.id, {
+      issueId, title, pageNumber, destinationPath,
+    });
 
     const qrId = createOpaqueQrId();
     const { data, error } = await supabase.from("qr_routes").insert({
       qr_id: qrId,
-      topic_id: topicId,
+      topic_id: topic.id,
       placement_id: placementId,
       destination_path: topic.destination_path,
       created_by: user.id,
@@ -52,6 +58,55 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return adminErrorResponse(error);
   }
+}
+
+type AdminSupabase = Awaited<ReturnType<typeof requireAdmin>>["supabase"];
+
+async function findOrCreateTopic(
+  supabase: AdminSupabase,
+  userId: string,
+  values: { issueId: string; title: string; pageNumber: number; destinationPath: string },
+) {
+  const query = () => supabase.from("qr_topics")
+    .select("id,destination_path,active")
+    .eq("issue_id", values.issueId)
+    .eq("title", values.title)
+    .eq("page_number", values.pageNumber)
+    .maybeSingle();
+  const { data: existing, error: lookupError } = await query();
+  if (lookupError) throw lookupError;
+  if (existing) {
+    if (existing.active && existing.destination_path === values.destinationPath) return existing;
+    const { data, error } = await supabase.from("qr_topics").update({
+      active: true,
+      destination_path: values.destinationPath,
+    }).eq("id", existing.id).select("id,destination_path,active").single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await supabase.from("qr_topics").insert({
+    issue_id: values.issueId,
+    title: values.title,
+    page_number: values.pageNumber,
+    destination_path: values.destinationPath,
+    created_by: userId,
+  }).select("id,destination_path,active").single();
+  if (!error) return data;
+  if (error.code !== "23505") throw error;
+
+  const { data: racedTopic, error: racedError } = await query();
+  if (racedError || !racedTopic) throw racedError ?? error;
+  return racedTopic;
+}
+
+function cleanText(value: unknown, max: number) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function positiveInteger(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 9_999 ? parsed : null;
 }
 
 export async function PATCH(request: NextRequest) {

@@ -18,9 +18,10 @@ export async function GET(request: NextRequest, { params }: { params: { qrId: st
 
     const value = `${getPublicSiteUrl()}/q/${route.qr_id}`;
     const format = request.nextUrl.searchParams.get("format") === "svg" ? "svg" : "png";
+    const disposition = request.nextUrl.searchParams.get("download") === "1" ? "attachment" : "inline";
     const headers = {
       "Cache-Control": "private, no-store",
-      "Content-Disposition": `attachment; filename="${route.qr_id}.${format}"`,
+      "Content-Disposition": `${disposition}; filename="${route.qr_id}.${format}"`,
     };
     if (format === "svg") {
       const svg = await QRCode.toString(value, { type: "svg", errorCorrectionLevel: "H", margin: 4 });
@@ -32,4 +33,3 @@ export async function GET(request: NextRequest, { params }: { params: { qrId: st
     return adminErrorResponse(error);
   }
 }
-
