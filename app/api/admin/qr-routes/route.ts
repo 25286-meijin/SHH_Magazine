@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminErrorResponse, requireAdmin } from "@/lib/admin-auth";
 import { getIssue } from "@/lib/content";
 import { createOpaqueQrId, getPublicSiteUrl } from "@/lib/qr";
+import { isFixedQrPlacement } from "@/lib/qr-placements";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -32,8 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: placement } = await supabase
-      .from("placements").select("id").eq("id", placementId).eq("active", true).maybeSingle();
-    if (!placement) {
+      .from("placements").select("id,name").eq("id", placementId).eq("active", true).maybeSingle();
+    if (!placement || !isFixedQrPlacement(placement.name)) {
       return NextResponse.json({ ok: false, error: "公播區域不存在，或目前未啟用" }, { status: 400 });
     }
 

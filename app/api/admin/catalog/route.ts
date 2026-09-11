@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminErrorResponse, requireAdmin } from "@/lib/admin-auth";
 import { getIssue } from "@/lib/content";
+import { FIXED_QR_PLACEMENTS } from "@/lib/qr-placements";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -10,11 +11,15 @@ export async function GET() {
     const [{ data: topics, error: topicsError }, { data: placements, error: placementsError }] =
       await Promise.all([
         supabase.from("qr_topics").select("*").order("created_at", { ascending: false }),
-        supabase.from("placements").select("*").order("name"),
+        supabase.from("placements").select("*").in("name", [...FIXED_QR_PLACEMENTS]),
       ]);
     if (topicsError) throw topicsError;
     if (placementsError) throw placementsError;
-    return NextResponse.json({ ok: true, topics, placements });
+    const placementOrder = new Map(FIXED_QR_PLACEMENTS.map((name, index) => [name, index]));
+    const orderedPlacements = (placements ?? []).sort(
+      (left, right) => (placementOrder.get(left.name) ?? 99) - (placementOrder.get(right.name) ?? 99),
+    );
+    return NextResponse.json({ ok: true, topics, placements: orderedPlacements });
   } catch (error) {
     return adminErrorResponse(error);
   }
