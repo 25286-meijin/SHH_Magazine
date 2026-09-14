@@ -200,3 +200,15 @@ test("mobile reader pages use each PDF page's real aspect ratio", async () => {
   assert.match(reader, /aspectRatio: pageRatio/);
   assert.match(reader, /minHeight: pageRatio \? 0 : undefined/);
 });
+
+test("reader waits for preceding page ratios before scrolling to a requested page", async () => {
+  const reader = await readFile(
+    new URL("../components/PdfReader.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(reader, /precedingPagesMeasured/);
+  assert.match(reader, /measuredPages\.has\(page\)/);
+  assert.match(reader, /requestAnimationFrame/);
+  assert.match(reader, /scrollIntoView\(\{ block: "start" \}\)/);
+});
