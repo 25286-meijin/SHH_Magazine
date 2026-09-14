@@ -1,5 +1,6 @@
 import issuesData from "@/data/issues.demo.json";
 import qrData from "@/data/qr-routes.demo.json";
+import { unstable_noStore } from "next/cache";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 export type IssueStatus = "draft" | "scheduled" | "published" | "archived";
@@ -113,6 +114,7 @@ export async function getLatestIssue(): Promise<Issue> {
 }
 
 export async function getIssue(id: string): Promise<Issue | undefined> {
+  unstable_noStore();
   const supabase = createServiceSupabaseClient();
   if (supabase) {
     const { data, error } = await supabase
@@ -121,24 +123,25 @@ export async function getIssue(id: string): Promise<Issue | undefined> {
       .eq("issue_id", id)
       .eq("status", "published")
       .maybeSingle();
-    if (!error && data) return normalizeIssue(data as DatabaseIssue);
-    if (!error) {
-      const { data: alias } = await supabase
-        .from("magazine_issue_aliases")
-        .select("magazine_issue_id")
-        .eq("alias", id)
+    if (error) throw error;
+    if (data) return normalizeIssue(data as DatabaseIssue);
+    const { data: alias, error: aliasError } = await supabase
+      .from("magazine_issue_aliases")
+      .select("magazine_issue_id")
+      .eq("alias", id)
+      .maybeSingle();
+    if (aliasError) throw aliasError;
+    if (alias?.magazine_issue_id) {
+      const { data: aliasedIssue, error: aliasedIssueError } = await supabase
+        .from("magazine_issues")
+        .select("*")
+        .eq("id", alias.magazine_issue_id)
+        .eq("status", "published")
         .maybeSingle();
-      if (alias?.magazine_issue_id) {
-        const { data: aliasedIssue } = await supabase
-          .from("magazine_issues")
-          .select("*")
-          .eq("id", alias.magazine_issue_id)
-          .eq("status", "published")
-          .maybeSingle();
-        if (aliasedIssue) return normalizeIssue(aliasedIssue as DatabaseIssue);
-      }
-      return undefined;
+      if (aliasedIssueError) throw aliasedIssueError;
+      if (aliasedIssue) return normalizeIssue(aliasedIssue as DatabaseIssue);
     }
+    return undefined;
   }
   return legacyIssues.find((issue) => issue.issue_id === id && issue.status === "published");
 }
@@ -166,13 +169,14 @@ export function safeEntryId(value: string | string[] | undefined): string | null
 }
 
 async function loadStoredIssues(publishedOnly: boolean): Promise<Issue[] | null> {
+  unstable_noStore();
   const supabase = createServiceSupabaseClient();
   if (!supabase) return null;
   let query = supabase.from("magazine_issues").select("*");
   if (publishedOnly) query = query.eq("status", "published");
   const { data, error } = await query.order("publish_date", { ascending: false });
-  if (error || !data?.length) return null;
-  return (data as DatabaseIssue[]).map(normalizeIssue);
+  if (error) throw error;
+  return ((data ?? []) as DatabaseIssue[]).map(normalizeIssue);
 }
 
 function normalizeIssue(issue: DatabaseIssue): Issue {

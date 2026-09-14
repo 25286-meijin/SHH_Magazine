@@ -84,7 +84,8 @@ export default function IssueManager({
     [issues, selectedId],
   );
   const scheduledIssues = issues.filter((issue) => issue.status === "scheduled");
-  const managedIssues = issues.filter((issue) => issue.status !== "scheduled");
+  const managedIssues = issues.filter((issue) => issue.status !== "scheduled" && issue.status !== "archived");
+  const taipeiNow = currentTaipeiSchedule();
 
   const applyIssues = useCallback((nextIssues: ManagedIssue[]) => {
     setIssues(nextIssues);
@@ -224,7 +225,7 @@ export default function IssueManager({
         }),
       });
       applyIssues(result.issues ?? []);
-      beginEdit(normalizeManagedIssue(result.issue));
+      beginNew();
       setMessage("醫訊已下架，檔案與既有紀錄均保留。");
     } catch (error) {
       setMessage((error as Error).message);
@@ -234,9 +235,7 @@ export default function IssueManager({
   }
 
   return <section className="admin-section issue-management">
-    <p className="eyebrow">MAGAZINE MANAGEMENT</p>
-    <div className="section-heading-row"><h2>醫訊管理</h2><button type="button" className="button secondary" onClick={beginNew}>新增醫訊</button></div>
-    <p className="section-description">新增或更新醫訊資料，只需上傳 PDF；系統會自動擷取第一頁作為 JPG 封面。</p>
+    <div className="section-heading-row issue-management-actions"><button type="button" className="button secondary" onClick={beginNew}>新增醫訊</button></div>
     {message && <p className="admin-message" role="status">{message}</p>}
 
     <div className="scheduled-section">
@@ -274,7 +273,7 @@ export default function IssueManager({
         {preparedPageCount && <p className="upload-summary">PDF 頁數：{preparedPageCount}</p>}
         {coverPreview && <div className="generated-cover"><span>自動產生的封面預覽</span><Image src={coverPreview} alt="醫訊 PDF 第一頁封面預覽" width={220} height={305} unoptimized /></div>}
         <fieldset className="publish-settings"><legend>發布設定</legend><label className="check-row"><input type="radio" name="publish-mode" checked={form.publish_mode === "immediate"} onChange={() => setForm({ ...form, publish_mode: "immediate" })} />立即發布</label><label className="check-row"><input type="radio" name="publish-mode" checked={form.publish_mode === "scheduled"} onChange={() => setForm({ ...form, publish_mode: "scheduled" })} />排程發布</label>
-          {form.publish_mode === "scheduled" && <><p className="note">排程時間以 Asia/Taipei（台灣時間）處理。</p><div className="admin-form-grid"><label>排程日期<input required type="date" value={form.schedule_date} onChange={event => setForm({ ...form, schedule_date: event.target.value })} /></label><label>排程時間<input required type="time" value={form.schedule_time} onChange={event => setForm({ ...form, schedule_time: event.target.value })} /></label></div></>}
+          {form.publish_mode === "scheduled" && <><p className="note">排程時間以 Asia/Taipei（台灣時間）處理。</p><div className="admin-form-grid"><label>排程日期<input required type="date" min={taipeiNow.date} value={form.schedule_date} onChange={event => setForm({ ...form, schedule_date: event.target.value })} /></label><label>排程時間<input required type="time" min={form.schedule_date === taipeiNow.date ? taipeiNow.time : undefined} value={form.schedule_time} onChange={event => setForm({ ...form, schedule_time: event.target.value })} /></label></div></>}
         </fieldset>
         <label className="check-row"><input type="checkbox" checked={form.set_as_latest} onChange={event => setForm({ ...form, set_as_latest: event.target.checked })} />發布後設為最新一期</label>
         <div className="actions issue-actions">
@@ -344,6 +343,10 @@ function formatTaipeiSchedule(value: string | null) {
   }).formatToParts(new Date(value));
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
   return { date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}` };
+}
+
+function currentTaipeiSchedule() {
+  return formatTaipeiSchedule(new Date().toISOString());
 }
 
 function formatTaipeiDateTime(value: string | null) {

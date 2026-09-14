@@ -45,6 +45,10 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.doesNotMatch(manager, /期號補充資訊（選填）/);
   assert.match(manager, />門診時刻表 PDF 頁次</);
   assert.match(manager, /下架/);
+  assert.match(manager, /status !== "scheduled" && issue\.status !== "archived"/);
+  assert.doesNotMatch(manager, /MAGAZINE MANAGEMENT/);
+  assert.doesNotMatch(manager, /新增或更新醫訊資料，只需上傳 PDF/);
+  assert.doesNotMatch(manager, /<h2>醫訊管理<\/h2>/);
   assert.match(issueApi, /requireAdmin\(\)/);
   assert.match(issueApi, /set_as_latest/);
   assert.match(issueApi, /original_issue_id/);
@@ -68,8 +72,11 @@ test("scheduled publishing is additive, retryable, and driven by Supabase cron",
   assert.doesNotMatch(migration, /drop\s+(table|column)|truncate|delete\s+from/i);
   assert.match(manager, /排程中/);
   assert.match(manager, /Asia\/Taipei/);
+  assert.match(manager, /min=\{taipeiNow\.date\}/);
+  assert.match(manager, /min=\{form\.schedule_date === taipeiNow\.date \? taipeiNow\.time : undefined\}/);
   assert.match(content, /"scheduled"/);
   assert.match(issueApi, /scheduled_publish_at/);
+  assert.match(issueApi, /Date\.parse\(scheduledPublishAt!\) <= Date\.now\(\)/);
 });
 
 test("admin preview is protected and disables all reader tracking", async () => {
@@ -88,9 +95,10 @@ test("admin preview is protected and disables all reader tracking", async () => 
   assert.doesNotMatch(preview, /\/q\//);
 });
 
-test("public issue data comes from Supabase with a legacy fallback and latest metadata", async () => {
-  const [content, home, latest, qrApi, analyticsApi] = await Promise.all([
+test("public issue data uses uncached Supabase state with an unconfigured legacy fallback", async () => {
+  const [content, supabaseServer, home, latest, qrApi, analyticsApi] = await Promise.all([
     source("lib/content.ts"),
+    source("lib/supabase/server.ts"),
     source("app/page.tsx"),
     source("app/latest/[section]/route.ts"),
     source("app/api/admin/qr-routes/route.ts"),
@@ -100,7 +108,10 @@ test("public issue data comes from Supabase with a legacy fallback and latest me
   assert.match(content, /from\("magazine_issues"\)/);
   assert.match(content, /issuesData/);
   assert.match(content, /is_latest/);
-  assert.match(content, /if \(!error\) \{[\s\S]*return undefined/);
+  assert.match(content, /unstable_noStore/);
+  assert.match(content, /if \(error\) throw error/);
+  assert.match(content, /if \(error\) throw error;[\s\S]*return undefined/);
+  assert.match(supabaseServer, /cache: "no-store"/);
   assert.match(home, /await getLatestIssue\(\)/);
   assert.match(latest, /await getLatestIssue\(\)/);
   assert.match(qrApi, /await getQrEligibleIssue\(issueId\)/);

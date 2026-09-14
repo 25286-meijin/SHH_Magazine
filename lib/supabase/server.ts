@@ -29,6 +29,8 @@ export function createServiceSupabaseClient() {
   if (!config) return null;
   return createClient(config.url, config.secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }
-

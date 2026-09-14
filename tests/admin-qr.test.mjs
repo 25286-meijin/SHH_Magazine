@@ -102,6 +102,8 @@ test("QR routes can be deactivated without deleting tracking history", async () 
   assert.match(routeApi, /deactivated_at/);
   assert.doesNotMatch(routeApi, /\.delete\(/);
   assert.match(dashboard, /停用 QR/);
+  assert.match(dashboard, /routes\.filter\(\(route\) => route\.active\)/);
+  assert.doesNotMatch(dashboard, /保留歷史紀錄/);
 });
 
 test("QR creation accepts an existing issue, an inline topic title, a page, and a placement", async () => {
@@ -156,7 +158,9 @@ test("admin uses the approved system name and shows only requested scan statisti
   ]);
 
   assert.match(page, /雙和醫院公播掃碼追蹤系統/);
-  assert.match(login, /雙和醫院公播掃碼追蹤系統/);
+  assert.match(login, /雙和醫院公播管理系統/);
+  assert.match(login, /只有經核准並具有 admin 角色的帳號可以查看。/);
+  assert.doesNotMatch(login, /QR 紀錄與統計/);
   assert.match(dashboard, /雙和醫院公播管理系統/);
   assert.match(dashboard, /QR Code 掃碼總次數/);
   assert.match(dashboard, /掃碼主題統計/);
@@ -165,6 +169,8 @@ test("admin uses the approved system name and shows only requested scan statisti
   assert.doesNotMatch(dashboard, /產生指定月份與頁碼的 QR Code，或依月份查看匿名 QR 導入紀錄。/);
   assert.doesNotMatch(dashboard, /這裡統計的是 QR 導入次數，不是掃描率，也不代表看過公播內容的總人數。/);
   assert.match(dashboard, /時間顯示為 Asia\/Taipei。/);
+  assert.doesNotMatch(dashboard, /QR ENTRIES|QR CODE MANAGEMENT/);
+  assert.match(dashboard, /className="section-description analytics-filter">先選擇醫訊月份/);
   assert.doesNotMatch(dashboard, /有導入的主題數|有導入的區域數/);
   assert.doesNotMatch(dashboard.slice(dashboard.indexOf("完整掃碼紀錄")), /<th>QR ID<\/th>/);
   assert.match(dashboard, /right\.qr_entries - left\.qr_entries/);
