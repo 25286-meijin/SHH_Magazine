@@ -16,8 +16,9 @@
 - [x] 完成 `/admin` 醫訊新增、修改、PDF 上傳、封面產生、草稿、發布、最新一期與下架程式。
 - [x] 保留既有靜態醫訊資產，不要求一次搬移。
 - [x] 以 alias 與 QR 關聯更新保護正式期號改名後的既有連結及紀錄。
-- [ ] 在 Supabase 測試專案執行 `20260914000000_magazine_management.sql`。
-- [ ] 在 Vercel Preview 驗證管理員登入、metadata 更新及檔案上傳；不可修改正式 Vercel。
+- [x] 在 Supabase 測試專案執行 `20260914000000_magazine_management.sql`。
+- [x] 在 Vercel Preview 驗證管理員登入、既有 metadata 讀取及 375/390px 版面；正式 Vercel 未修改。
+- [ ] 使用核准 PDF 在 Vercel Preview 實際驗證 metadata 更新及檔案上傳。
 - [ ] 使用正式但非個資的測試 PDF 完成新增／修改／發布／下架驗收，不建立虛構醫訊。
 
 Last updated: 2026-09-08

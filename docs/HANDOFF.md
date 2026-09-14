@@ -32,7 +32,7 @@ The public homepage, archive, issue pages, PDF reader, outpatient route, and shu
 - Supabase-backed QR Code management and protected scan statistics on the test branch.
 - `/admin` magazine management for create/edit, PDF upload, automatic first-page JPG cover, draft/publish/latest/archive, with legacy issue fallback.
 
-The magazine-management code and migration are currently on the test branch. The migration must be executed in the Supabase test project and the Preview deployment must finish before browser acceptance can be marked complete. Formal Vercel remains unchanged.
+The magazine-management code and migration are on the test branch. The migration was executed successfully in the Supabase test project and the Preview can read the four existing issues. The admin and public page-routing layouts passed 375/390px browser checks. An actual PDF upload/save remains for owner acceptance because validation did not rewrite an existing issue or create fabricated content. Formal Vercel remains unchanged.
 
 ## Known gaps and blockers
 
