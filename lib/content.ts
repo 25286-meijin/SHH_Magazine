@@ -1,28 +1,121 @@
 import issuesData from "@/data/issues.demo.json";
 import qrData from "@/data/qr-routes.demo.json";
+import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
-export type Issue = (typeof issuesData)[number];
+export type IssueStatus = "draft" | "published" | "archived";
+
+export type Issue = {
+  id?: string;
+  issue_id: string;
+  year: number;
+  month: number;
+  publish_date: string;
+  status: IssueStatus;
+  is_latest: boolean;
+  issue_number: string | null;
+  cover_image: string;
+  pdf_url: string | null;
+  local_pdf_path: string | null;
+  pdf_storage_path: string | null;
+  cover_storage_path: string | null;
+  pdf_page_count: number | null;
+  cover_title: string | null;
+  homepage_headline: string;
+  homepage_summary: string;
+  outpatient_start_page: number;
+  outpatient_page: number;
+  outpatient_end_page: number | null;
+  shuttle_page: number;
+  features: unknown[];
+};
+
 export type QrRoute = (typeof qrData)[number];
 
-export const issues = issuesData as Issue[];
+type DatabaseIssue = {
+  id: string;
+  issue_id: string;
+  year: number;
+  month: number;
+  publish_date: string;
+  status: IssueStatus;
+  is_latest: boolean;
+  issue_number: string | null;
+  cover_image: string;
+  pdf_url: string;
+  pdf_storage_path: string | null;
+  cover_storage_path: string | null;
+  pdf_page_count: number | null;
+  cover_title: string | null;
+  homepage_headline: string;
+  homepage_summary: string;
+  outpatient_start_page: number;
+  outpatient_end_page: number | null;
+  shuttle_page: number;
+  features: unknown[] | null;
+};
+
+const legacyIssues: Issue[] = issuesData.map((issue, index) => ({
+  ...issue,
+  status: issue.status as IssueStatus,
+  is_latest: index === 0,
+  issue_number: "issue_number" in issue ? issue.issue_number ?? null : null,
+  pdf_url: issue.pdf_url ?? null,
+  local_pdf_path: issue.local_pdf_path ?? null,
+  pdf_storage_path: null,
+  cover_storage_path: null,
+  pdf_page_count: null,
+  outpatient_start_page: issue.outpatient_page,
+  outpatient_end_page: issue.issue_id === "2026-09" ? 16 : null,
+  features: issue.features ?? [],
+}));
+
+export const issues = legacyIssues;
 export const qrRoutes = qrData as QrRoute[];
 
-export function getPublishedIssues(): Issue[] {
-  return issues
-    .filter((issue) => issue.status === "published")
-    .sort((a, b) => b.publish_date.localeCompare(a.publish_date));
+export async function getPublishedIssues(): Promise<Issue[]> {
+  const stored = await loadStoredIssues(true);
+  return sortPublished(stored ?? legacyIssues.filter((issue) => issue.status === "published"));
 }
 
-export function getLatestIssue(): Issue {
-  const latest = getPublishedIssues()[0];
+export async function getManagedIssues(): Promise<Issue[]> {
+  const stored = await loadStoredIssues(false);
+  return (stored ?? legacyIssues).sort((a, b) => b.publish_date.localeCompare(a.publish_date));
+}
+
+export async function getLatestIssue(): Promise<Issue> {
+  const latest = (await getPublishedIssues())[0];
   if (!latest) throw new Error("No published issue is configured");
   return latest;
 }
 
-export function getIssue(id: string): Issue | undefined {
-  return issues.find(
-    (issue) => issue.issue_id === id && issue.status === "published",
-  );
+export async function getIssue(id: string): Promise<Issue | undefined> {
+  const supabase = createServiceSupabaseClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("magazine_issues")
+      .select("*")
+      .eq("issue_id", id)
+      .eq("status", "published")
+      .maybeSingle();
+    if (!error && data) return normalizeIssue(data as DatabaseIssue);
+    if (!error) {
+      const { data: alias } = await supabase
+        .from("magazine_issue_aliases")
+        .select("magazine_issue_id")
+        .eq("alias", id)
+        .maybeSingle();
+      if (alias?.magazine_issue_id) {
+        const { data: aliasedIssue } = await supabase
+          .from("magazine_issues")
+          .select("*")
+          .eq("id", alias.magazine_issue_id)
+          .eq("status", "published")
+          .maybeSingle();
+        if (aliasedIssue) return normalizeIssue(aliasedIssue as DatabaseIssue);
+      }
+    }
+  }
+  return legacyIssues.find((issue) => issue.issue_id === id && issue.status === "published");
 }
 
 export function getQrRoute(id: string): QrRoute | undefined {
@@ -45,4 +138,30 @@ export function isAllowedRegistrationUrl(value: string): boolean {
 export function safeEntryId(value: string | string[] | undefined): string | null {
   const entryId = Array.isArray(value) ? value[0] : value;
   return entryId && /^[0-9a-f-]{36}$/i.test(entryId) ? entryId : null;
+}
+
+async function loadStoredIssues(publishedOnly: boolean): Promise<Issue[] | null> {
+  const supabase = createServiceSupabaseClient();
+  if (!supabase) return null;
+  let query = supabase.from("magazine_issues").select("*");
+  if (publishedOnly) query = query.eq("status", "published");
+  const { data, error } = await query.order("publish_date", { ascending: false });
+  if (error || !data?.length) return null;
+  return (data as DatabaseIssue[]).map(normalizeIssue);
+}
+
+function normalizeIssue(issue: DatabaseIssue): Issue {
+  return {
+    ...issue,
+    local_pdf_path: null,
+    outpatient_page: issue.outpatient_start_page,
+    features: issue.features ?? [],
+  };
+}
+
+function sortPublished(values: Issue[]) {
+  return [...values].sort((a, b) => {
+    if (a.is_latest !== b.is_latest) return a.is_latest ? -1 : 1;
+    return b.publish_date.localeCompare(a.publish_date);
+  });
 }

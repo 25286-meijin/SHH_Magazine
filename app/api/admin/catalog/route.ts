@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (value.kind === "topic") {
       const issueId = cleanText(value.issue_id, 32);
       const title = cleanText(value.title, 160);
-      if (!issueId || !title || !getIssue(issueId)) {
+      if (!issueId || !title || !await getIssue(issueId)) {
         return NextResponse.json({ ok: false, error: "請選擇有效期號並填寫正式主題名稱" }, { status: 400 });
       }
       const { data, error } = await supabase.from("qr_topics").insert({

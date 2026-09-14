@@ -1,6 +1,6 @@
 # SHH Magazine
 
-Supabase QR Code 管理、權限及測試環境設定請參考 [docs/SUPABASE_QR_SETUP.md](docs/SUPABASE_QR_SETUP.md)。
+Supabase QR Code、醫訊管理、權限及測試環境設定請參考 [docs/SUPABASE_QR_SETUP.md](docs/SUPABASE_QR_SETUP.md)。
 
 雙和醫訊數位閱讀暨 QR 成效追蹤平台（Pilot）。
 
@@ -52,6 +52,7 @@ magazine.shh.tmu.edu.tw
 - Current handoff status and known gaps: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 - First-time Codex guide: [`docs/COLLEAGUE_QUICKSTART.md`](docs/COLLEAGUE_QUICKSTART.md)
 - QR analytics setup: [`docs/QR_ANALYTICS_SETUP.md`](docs/QR_ANALYTICS_SETUP.md)
+- Magazine management setup: [`docs/MAGAZINE_MANAGEMENT_SETUP.md`](docs/MAGAZINE_MANAGEMENT_SETUP.md)
 - Hosting and quota estimate: [`docs/HOSTING_CAPACITY_AND_QUOTAS.md`](docs/HOSTING_CAPACITY_AND_QUOTAS.md)
 
 The PDF reader supports mixed portrait/landscape page ratios, vertical lazy rendering, page links, and button zoom. The repository still uses demo placement/creative data and a best-effort analytics adapter; see the handoff document before creating Pilot QR codes.

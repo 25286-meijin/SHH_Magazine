@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const title = cleanText(body.title, 160);
     const pageNumber = positiveInteger(body.page_number);
     const placementId = typeof body.placement_id === "string" ? body.placement_id : "";
-    if (!getIssue(issueId) || !title || !pageNumber || !uuidPattern.test(placementId)) {
+    if (!await getIssue(issueId) || !title || !pageNumber || !uuidPattern.test(placementId)) {
       return NextResponse.json({ ok: false, error: "請選擇有效月份、填寫主題與頁碼、並選擇公播區域" }, { status: 400 });
     }
 

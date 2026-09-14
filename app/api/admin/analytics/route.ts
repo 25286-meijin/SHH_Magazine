@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { supabase } = await requireAdmin();
     const issueId = request.nextUrl.searchParams.get("issue_id") ?? "";
-    if (!getIssue(issueId)) {
+    if (!await getIssue(issueId)) {
       return NextResponse.json({ ok: false, error: "請選擇有效的醫訊月份" }, { status: 400 });
     }
     const { data, error, count } = await supabase

@@ -11,8 +11,10 @@ type Props = {
   searchParams: { entry_id?: string | string[]; notice?: string };
 };
 
-export function generateMetadata({ params }: Props): Metadata {
-  const issue = getIssue(params.issueId);
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const issue = await getIssue(params.issueId);
   return issue
     ? {
         title: `${issue.year}年${String(issue.month).padStart(2, "0")}月號`,
@@ -21,8 +23,8 @@ export function generateMetadata({ params }: Props): Metadata {
     : {};
 }
 
-export default function IssuePage({ params, searchParams }: Props) {
-  const issue = getIssue(params.issueId);
+export default async function IssuePage({ params, searchParams }: Props) {
+  const issue = await getIssue(params.issueId);
   if (!issue) notFound();
 
   const entryId = safeEntryId(searchParams.entry_id);

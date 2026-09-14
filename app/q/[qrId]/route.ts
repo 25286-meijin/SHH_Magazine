@@ -40,7 +40,7 @@ export async function GET(
   const entryId = crypto.randomUUID();
   let destination = route.destination;
   if (route.issue_id === "latest" && destination === "/") {
-    destination = `/issues/${getLatestIssue().issue_id}`;
+    destination = `/issues/${(await getLatestIssue()).issue_id}`;
   }
 
   if (

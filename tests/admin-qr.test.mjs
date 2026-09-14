@@ -195,8 +195,8 @@ test("admin opens the latest issue analytics with compact scrolling statistics",
     dashboard.indexOf("</nav>"),
   );
 
-  assert.match(dashboard, /useState<"qr" \| "analytics">\("analytics"\)/);
-  assert.match(dashboard, /issues\[0\]\?\.issue_id/);
+  assert.match(dashboard, /useState<"qr" \| "analytics" \| "issues">\("analytics"\)/);
+  assert.match(dashboard, /issueOptions\[0\]\?\.issue_id/);
   assert.match(dashboard, /loadAnalytics\(latestIssueId\)/);
   assert.ok(navigation.indexOf("掃碼統計") < navigation.indexOf("QR Code 管理"));
   assert.match(content, /b\.publish_date\.localeCompare\(a\.publish_date\)/);

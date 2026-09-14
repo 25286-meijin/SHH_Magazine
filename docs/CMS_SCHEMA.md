@@ -2,7 +2,7 @@
 
 ## Goal
 
-正式版以 Google Sheet 作為輕量 Editorial CMS；Pilot 先用相同 schema 的 local JSON，避免 Google Sheet / Apps Script 成為民眾閱讀 critical path。
+正式版以同一套網站的 `/admin` 作為 Editorial CMS，Supabase 保存 metadata，Supabase Storage 保存後台新上傳的 PDF 與 JPG。既有 local JSON 與靜態檔案保留作為 migration 尚未啟用時的相容 fallback。
 
 ## Issue Fields
 
@@ -16,12 +16,15 @@
 | issue_number | no | 228 |
 | cover_image | yes | URL/path |
 | pdf_url | yes | official URL |
-| local_pdf_path | pilot | /demo/issues/2026-09.pdf |
+| pdf_storage_path | new uploads | Storage object path |
+| cover_storage_path | new uploads | Storage object path |
 | cover_title | no | 封面原始主題 |
 | homepage_headline | yes | 首頁主標 |
 | homepage_summary | yes | 40–100 字 |
-| outpatient_page | yes | actual page |
+| outpatient_start_page | yes | actual start page |
+| outpatient_end_page | no | actual end page |
 | shuttle_page | yes | actual page |
+| is_latest | yes | true / false |
 | updated_at | yes | ISO datetime |
 
 ## Feature Fields
@@ -40,19 +43,11 @@ target_page
 target_url
 ```
 
-## Google Sheet Tabs
+## Management workflow
 
-建議：
+管理員在 `/admin` 新增或編輯 metadata，只上傳 PDF；瀏覽器使用既有 `pdfjs-dist` 擷取第一頁並轉為 JPG。PDF/JPG 先以短效 signed upload URL 寫入 private staging bucket，伺服器驗證格式與 PDF 頁數後再發布至 public asset bucket。
 
-```text
-Issues
-Features
-Placements
-Creatives
-QR_Routes
-```
-
-Analytics 不寫進 Editorial CMS Sheet。
+下架採 `archived` 狀態，不物理刪除 metadata、QR 對應、歷史掃碼資料或既有資產。若下架目前最新一期，必須先指定另一個已發布期號為最新一期。
 
 ## Publish Rules
 
@@ -70,11 +65,10 @@ Publish 前至少驗證：
 ## Workflow
 
 ```text
-資訊室照舊上傳官方 PDF
-→ 多媒體組填 metadata
-→ Preview
-→ Published
-→ website sync / snapshot
+管理員登入 /admin
+→ 填 metadata 並上傳 PDF
+→ 儲存草稿或發布
+→ Published issue 立即由網站讀取
 ```
 
-正式版 sync 必須採 last-known-good：新資料驗證失敗時保留上一版正常 snapshot。
+新資料驗證或上傳失敗時，不覆蓋原本已發布的有效紀錄。
