@@ -56,7 +56,6 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
 
     const largestPage = Math.max(
       values.outpatient_start_page,
-      values.outpatient_end_page ?? 0,
       values.shuttle_page,
     );
     let assets = existing ? {
@@ -87,9 +86,10 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
       }, { status: 400 });
     }
 
-    const publishing = values.action === "publish";
+    const publishing = values.publish_mode === "immediate";
+    const scheduling = values.publish_mode === "scheduled";
     const remainsLatest = Boolean(existing?.is_latest) && publishing;
-    if (!publishing && existing?.is_latest) {
+    if (scheduling && existing?.is_latest) {
       return NextResponse.json({ ok: false, error: "請先將另一個已發布期號設為最新一期" }, { status: 409 });
     }
 
@@ -98,18 +98,22 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
       year: Number(values.issue_id.slice(0, 4)),
       month: Number(values.issue_id.slice(5, 7)),
       publish_date: values.publish_date,
-      status: publishing ? "published" : "draft",
+      status: publishing ? "published" : "scheduled",
       is_latest: remainsLatest,
-      issue_number: values.issue_number,
+      issue_number: existing?.issue_number ?? null,
       homepage_headline: values.homepage_headline,
       homepage_summary: values.homepage_summary,
       cover_title: values.cover_title_same_as_homepage ? values.homepage_headline : values.cover_title,
       outpatient_start_page: values.outpatient_start_page,
-      outpatient_end_page: values.outpatient_end_page,
+      outpatient_end_page: null,
       shuttle_page: values.shuttle_page,
       ...assets,
       updated_by: user.id,
       published_at: publishing ? existing?.published_at ?? new Date().toISOString() : null,
+      scheduled_publish_at: scheduling ? values.scheduled_publish_at : null,
+      set_latest_on_publish: scheduling && values.set_as_latest,
+      schedule_last_attempt_at: null,
+      schedule_error: null,
     };
 
     let saved;
@@ -274,29 +278,33 @@ function validateIssue(body: Record<string, unknown>) {
   const coverTitle = cleanText(body.cover_title, 160);
   const sameTitle = body.cover_title_same_as_homepage === true;
   const outpatientStart = positiveInteger(body.outpatient_start_page);
-  const outpatientEnd = optionalPositiveInteger(body.outpatient_end_page);
   const shuttlePage = positiveInteger(body.shuttle_page);
-  const action = body.action === "publish" ? "publish" : "draft";
+  const publishMode = body.publish_mode === "scheduled" ? "scheduled" : "immediate";
+  const scheduleDate = cleanText(body.schedule_date, 10);
+  const scheduleTime = cleanText(body.schedule_time, 5);
+  const scheduledPublishAt = publishMode === "scheduled"
+    ? taipeiScheduleToUtc(scheduleDate, scheduleTime)
+    : null;
   let error = "";
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(issueId)) error = "正式期號必須使用 YYYY-MM 格式";
   else if (!/^\d{4}-\d{2}-\d{2}$/.test(publishDate)) error = "請填寫正式發行日期";
   else if (!headline || !summary) error = "請填寫首頁標題與首頁摘要";
   else if (!sameTitle && !coverTitle) error = "請填寫封面正式標題";
   else if (!outpatientStart || !shuttlePage) error = "請填寫有效的門診及接駁車頁碼";
-  else if (outpatientEnd && outpatientEnd < outpatientStart) error = "門診結束頁不可小於起始頁";
+  else if (publishMode === "scheduled" && !scheduledPublishAt) error = "請填寫有效的台灣排程日期與時間";
+  else if (publishMode === "scheduled" && Date.parse(scheduledPublishAt!) <= Date.now()) error = "排程發布時間必須晚於現在";
   return {
     error,
     issue_id: issueId,
-    issue_number: cleanText(body.issue_number, 32) || null,
     publish_date: publishDate,
     homepage_headline: headline,
     homepage_summary: summary,
     cover_title: coverTitle,
     cover_title_same_as_homepage: sameTitle,
     outpatient_start_page: outpatientStart ?? 0,
-    outpatient_end_page: outpatientEnd,
     shuttle_page: shuttlePage ?? 0,
-    action,
+    publish_mode: publishMode,
+    scheduled_publish_at: scheduledPublishAt,
     set_as_latest: body.set_as_latest === true,
     staging_pdf_path: cleanText(body.staging_pdf_path, 500) || null,
     staging_cover_path: cleanText(body.staging_cover_path, 500) || null,
@@ -312,9 +320,20 @@ function positiveInteger(value: unknown) {
   return Number.isInteger(parsed) && parsed > 0 && parsed <= 9_999 ? parsed : null;
 }
 
-function optionalPositiveInteger(value: unknown) {
-  if (value === null || value === undefined || value === "") return null;
-  return positiveInteger(value);
+function taipeiScheduleToUtc(date: string, time: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const instant = new Date(`${date}T${time}:00+08:00`);
+  if (Number.isNaN(instant.getTime())) return null;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return null;
+  const taipei = new Date(instant.getTime() + 8 * 60 * 60 * 1000);
+  if (
+    taipei.getUTCFullYear() !== year || taipei.getUTCMonth() + 1 !== month ||
+    taipei.getUTCDate() !== day || taipei.getUTCHours() !== hour ||
+    taipei.getUTCMinutes() !== minute
+  ) return null;
+  return instant.toISOString();
 }
 
 function revalidateIssuePages(...issueIds: string[]) {

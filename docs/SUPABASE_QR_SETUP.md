@@ -27,7 +27,9 @@
 
 `supabase/migrations/20260914000000_magazine_management.sql`
 
-前三個 migration 建立 QR 追蹤與九個已確認的固定公播區域；第四個建立醫訊管理資料表及 Storage bucket，並以 repository 既有 metadata 建立既有期號索引。執行後要確認匿名角色無法讀取 QR 與管理資料；匿名使用者只能透過網站讀取已發布醫訊。
+`supabase/migrations/20260914010000_scheduled_magazine_publishing.sql`
+
+前三個 migration 建立 QR 追蹤與九個已確認的固定公播區域；第四個建立醫訊管理資料表及 Storage bucket，並以 repository 既有 metadata 建立既有期號索引；第五個增加排程欄位、發布函式與每分鐘執行的 Supabase Cron。執行後要確認匿名角色無法讀取 QR 與管理資料；匿名使用者只能透過網站讀取已發布醫訊。
 
 ## 3. 建立管理員
 
@@ -70,7 +72,8 @@ SUPABASE_SECRET_KEY=<測試專案 server-only secret key>
 - 建立主題與區域的 QR Code，下載 PNG／SVG。
 - 停用不再使用的 QR Code；歷史掃碼紀錄不會被刪除。
 - 先選擇醫訊月份，再查看該月份的掃碼總次數、主題統計、區域統計與完整掃碼紀錄。
-- 新增或編輯醫訊、上傳 PDF、自動產生封面、儲存草稿、發布及下架醫訊。
+- 新增或編輯醫訊、上傳 PDF、自動產生封面、立即／排程發布及下架醫訊。
+- 為排程中的醫訊提前產生 QR Code，並使用不計入統計的管理員預覽。
 
 醫訊管理的詳細欄位、Storage 與下架規則請見 `docs/MAGAZINE_MANAGEMENT_SETUP.md`。
 

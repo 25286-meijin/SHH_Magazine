@@ -22,17 +22,19 @@ export function PdfReader({
   issue,
   initialPage,
   entryId,
+  trackingEnabled = true,
 }: {
   issue: Issue;
   initialPage: number;
   entryId: string | null;
+  trackingEnabled?: boolean;
 }) {
   const [pdf, setPdf] = useState<PdfDocument>();
   const [error, setError] = useState(false);
   const [scale, setScale] = useState(1);
   const [measuredPages, setMeasuredPages] = useState<Set<number>>(() => new Set());
   const milestones = useRef(new Set<number>());
-  const track = useEngagementTracking({ issueId: issue.issue_id, entryId });
+  const track = useEngagementTracking({ issueId: issue.issue_id, entryId, enabled: trackingEnabled });
   const markPageMeasured = useCallback((page: number) => {
     setMeasuredPages((current) => {
       if (current.has(page)) return current;

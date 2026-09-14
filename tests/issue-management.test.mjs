@@ -35,13 +35,56 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.match(manager, /pdfjs-dist/);
   assert.match(manager, /canvas\.toBlob/);
   assert.match(manager, /image\/jpeg/);
-  assert.match(manager, /儲存草稿/);
-  assert.match(manager, /發布/);
+  assert.match(manager, /立即發布/);
+  assert.match(manager, /排程發布/);
+  assert.match(manager, /排程日期/);
+  assert.match(manager, /排程時間/);
+  assert.match(manager, /確認發布/);
+  assert.doesNotMatch(manager, /儲存草稿/);
+  assert.doesNotMatch(manager, /門診時刻表 PDF 頁次（結束，可留空）/);
+  assert.doesNotMatch(manager, /期號補充資訊（選填）/);
+  assert.match(manager, />門診時刻表 PDF 頁次</);
   assert.match(manager, /下架/);
   assert.match(issueApi, /requireAdmin\(\)/);
   assert.match(issueApi, /set_as_latest/);
   assert.match(issueApi, /original_issue_id/);
   assert.match(uploadApi, /createSignedUploadUrl/);
+});
+
+test("scheduled publishing is additive, retryable, and driven by Supabase cron", async () => {
+  const [migration, manager, content, issueApi] = await Promise.all([
+    source("supabase/migrations/20260914010000_scheduled_magazine_publishing.sql"),
+    source("components/IssueManager.tsx"),
+    source("lib/content.ts"),
+    source("app/api/admin/issues/route.ts"),
+  ]);
+
+  assert.match(migration, /scheduled_publish_at timestamptz/i);
+  assert.match(migration, /set_latest_on_publish boolean/i);
+  assert.match(migration, /schedule_error text/i);
+  assert.match(migration, /publish_due_magazine_issues/i);
+  assert.match(migration, /cron\.schedule/i);
+  assert.doesNotMatch(migration, /drop\s+(table|column)|truncate|delete\s+from/i);
+  assert.match(manager, /排程中/);
+  assert.match(manager, /Asia\/Taipei/);
+  assert.match(content, /"scheduled"/);
+  assert.match(issueApi, /scheduled_publish_at/);
+});
+
+test("admin preview is protected and disables all reader tracking", async () => {
+  const [preview, reader, tracking] = await Promise.all([
+    source("app/admin/preview/issues/[issueId]/page.tsx"),
+    source("components/PdfReader.tsx"),
+    source("hooks/useEngagementTracking.ts"),
+  ]);
+
+  assert.match(preview, /requireAdmin\(\)/);
+  assert.match(preview, /getManagedIssue/);
+  assert.match(preview, /trackingEnabled=\{false\}/);
+  assert.match(reader, /trackingEnabled/);
+  assert.match(tracking, /enabled/);
+  assert.match(tracking, /if \(!enabled\) return/);
+  assert.doesNotMatch(preview, /\/q\//);
 });
 
 test("public issue data comes from Supabase with a legacy fallback and latest metadata", async () => {
@@ -56,9 +99,9 @@ test("public issue data comes from Supabase with a legacy fallback and latest me
   assert.match(content, /from\("magazine_issues"\)/);
   assert.match(content, /issuesData/);
   assert.match(content, /is_latest/);
+  assert.match(content, /if \(!error\) \{[\s\S]*return undefined/);
   assert.match(home, /await getLatestIssue\(\)/);
   assert.match(latest, /await getLatestIssue\(\)/);
-  assert.match(qrApi, /await getIssue\(issueId\)/);
+  assert.match(qrApi, /await getQrEligibleIssue\(issueId\)/);
   assert.match(analyticsApi, /await getIssue\(issueId\)/);
 });
-

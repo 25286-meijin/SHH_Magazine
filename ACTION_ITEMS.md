@@ -20,6 +20,9 @@
 - [x] 在 Vercel Preview 驗證管理員登入、既有 metadata 讀取及 375/390px 版面；正式 Vercel 未修改。
 - [ ] 使用核准 PDF 在 Vercel Preview 實際驗證 metadata 更新及檔案上傳。
 - [ ] 使用正式但非個資的測試 PDF 完成新增／修改／發布／下架驗收，不建立虛構醫訊。
+- [x] 完成台灣時間排程發布、排程 QR 與不計統計的管理員預覽程式及 migration。
+- [x] 在 Supabase 測試專案執行排程 migration，確認每分鐘 Cron job 已啟用。
+- [ ] 使用核准資料驗證排程成功、失敗保留及 QR 發布前後行為。
 
 Last updated: 2026-09-08
 

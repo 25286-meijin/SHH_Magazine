@@ -110,7 +110,7 @@ test("QR creation accepts an existing issue, an inline topic title, a page, and 
     source("components/AdminDashboard.tsx"),
   ]);
 
-  assert.match(routeApi, /getIssue\(issueId\)/);
+  assert.match(routeApi, /getQrEligibleIssue\(issueId\)/);
   assert.match(routeApi, /page_number/);
   assert.match(routeApi, /title/);
   assert.match(routeApi, /`\/read\/\$\{issueId\}`/);
@@ -157,7 +157,7 @@ test("admin uses the approved system name and shows only requested scan statisti
 
   assert.match(page, /雙和醫院公播掃碼追蹤系統/);
   assert.match(login, /雙和醫院公播掃碼追蹤系統/);
-  assert.match(dashboard, /雙和醫院公播掃碼追蹤系統/);
+  assert.match(dashboard, /雙和醫院公播管理系統/);
   assert.match(dashboard, /QR Code 掃碼總次數/);
   assert.match(dashboard, /掃碼主題統計/);
   assert.match(dashboard, /掃碼區域統計/);
@@ -169,6 +169,19 @@ test("admin uses the approved system name and shows only requested scan statisti
   assert.doesNotMatch(dashboard.slice(dashboard.indexOf("完整掃碼紀錄")), /<th>QR ID<\/th>/);
   assert.match(dashboard, /right\.qr_entries - left\.qr_entries/);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.admin-nav \.logo/);
+});
+
+test("scheduled issues can create permanent QR codes without public tracking before publication", async () => {
+  const [dashboard, qrApi, qrRoute] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/api/admin/qr-routes/route.ts"),
+    source("app/q/[qrId]/route.ts"),
+  ]);
+
+  assert.match(dashboard, /預覽導入頁面/);
+  assert.match(qrApi, /getQrEligibleIssue/);
+  assert.match(qrRoute, /getIssue\(storedRoute\.topic\.issue_id\)/);
+  assert.ok(qrRoute.indexOf("getIssue(storedRoute.topic.issue_id)") < qrRoute.indexOf("recordQrEntry(storedRoute"));
 });
 
 test("scan statistic cards share title styling and scroll after three rows", async () => {
@@ -196,7 +209,7 @@ test("admin opens the latest issue analytics with compact scrolling statistics",
   );
 
   assert.match(dashboard, /useState<"qr" \| "analytics" \| "issues">\("analytics"\)/);
-  assert.match(dashboard, /issueOptions\[0\]\?\.issue_id/);
+  assert.match(dashboard, /publishedIssues\[0\]\?\.issue_id/);
   assert.match(dashboard, /loadAnalytics\(latestIssueId\)/);
   assert.ok(navigation.indexOf("掃碼統計") < navigation.indexOf("QR Code 管理"));
   assert.match(content, /b\.publish_date\.localeCompare\(a\.publish_date\)/);

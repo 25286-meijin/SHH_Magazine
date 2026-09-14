@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getIssue,
   getLatestIssue,
   getQrRoute,
   isAllowedRegistrationUrl,
@@ -13,6 +14,10 @@ export async function GET(
 ) {
   const storedRoute = await getStoredQrRoute(params.qrId).catch(() => null);
   if (storedRoute) {
+    const publishedIssue = await getIssue(storedRoute.topic.issue_id);
+    if (!publishedIssue) {
+      return NextResponse.redirect(new URL("/?notice=issue-unavailable", request.url), 302);
+    }
     const entryId = crypto.randomUUID();
     const qrEntryAtUtc = new Date().toISOString();
     await recordQrEntry(storedRoute, entryId, qrEntryAtUtc).catch(() => undefined);
