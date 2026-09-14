@@ -210,6 +210,9 @@ async function publishUploadedAssets(
   if (coverBytes[0] !== 0xff || coverBytes[1] !== 0xd8 || coverBytes[2] !== 0xff) {
     throw new Error("自動產生的封面不是有效 JPG");
   }
+  // Preload the worker module so PDF.js can use its in-process handler in
+  // serverless bundles instead of importing a worker file from a chunk path.
+  await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const document = await pdfjs.getDocument({ data: pdfBytes }).promise;
   const pageCount = document.numPages;

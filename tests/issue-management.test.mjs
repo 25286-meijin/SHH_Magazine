@@ -48,6 +48,7 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.match(issueApi, /requireAdmin\(\)/);
   assert.match(issueApi, /set_as_latest/);
   assert.match(issueApi, /original_issue_id/);
+  assert.match(issueApi, /pdfjs-dist\/legacy\/build\/pdf\.worker\.mjs/);
   assert.match(uploadApi, /createSignedUploadUrl/);
 });
 
