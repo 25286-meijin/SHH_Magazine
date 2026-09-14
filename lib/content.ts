@@ -117,28 +117,34 @@ export async function getIssue(id: string): Promise<Issue | undefined> {
   unstable_noStore();
   const supabase = createServiceSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
+    const loadDirectIssue = () => supabase
       .from("magazine_issues")
       .select("*")
       .eq("issue_id", id)
       .eq("status", "published")
       .maybeSingle();
-    if (error) throw error;
+    let { data, error } = await loadDirectIssue();
+    if (error) ({ data, error } = await loadDirectIssue());
+    if (error) return legacyIssues.find((issue) => issue.issue_id === id && issue.status === "published");
     if (data) return normalizeIssue(data as DatabaseIssue);
-    const { data: alias, error: aliasError } = await supabase
+    const loadAlias = () => supabase
       .from("magazine_issue_aliases")
       .select("magazine_issue_id")
       .eq("alias", id)
       .maybeSingle();
-    if (aliasError) throw aliasError;
+    let { data: alias, error: aliasError } = await loadAlias();
+    if (aliasError) ({ data: alias, error: aliasError } = await loadAlias());
+    if (aliasError) return undefined;
     if (alias?.magazine_issue_id) {
-      const { data: aliasedIssue, error: aliasedIssueError } = await supabase
+      const loadAliasedIssue = () => supabase
         .from("magazine_issues")
         .select("*")
         .eq("id", alias.magazine_issue_id)
         .eq("status", "published")
         .maybeSingle();
-      if (aliasedIssueError) throw aliasedIssueError;
+      let { data: aliasedIssue, error: aliasedIssueError } = await loadAliasedIssue();
+      if (aliasedIssueError) ({ data: aliasedIssue, error: aliasedIssueError } = await loadAliasedIssue());
+      if (aliasedIssueError) return undefined;
       if (aliasedIssue) return normalizeIssue(aliasedIssue as DatabaseIssue);
     }
     return undefined;
@@ -174,8 +180,13 @@ async function loadStoredIssues(publishedOnly: boolean): Promise<Issue[] | null>
   if (!supabase) return null;
   let query = supabase.from("magazine_issues").select("*");
   if (publishedOnly) query = query.eq("status", "published");
-  const { data, error } = await query.order("publish_date", { ascending: false });
-  if (error) throw error;
+  let { data, error } = await query.order("publish_date", { ascending: false });
+  if (error) {
+    let retry = supabase.from("magazine_issues").select("*");
+    if (publishedOnly) retry = retry.eq("status", "published");
+    ({ data, error } = await retry.order("publish_date", { ascending: false }));
+  }
+  if (error) return null;
   return ((data ?? []) as DatabaseIssue[]).map(normalizeIssue);
 }
 

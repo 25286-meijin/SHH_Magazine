@@ -109,8 +109,8 @@ test("public issue data uses uncached Supabase state with an unconfigured legacy
   assert.match(content, /issuesData/);
   assert.match(content, /is_latest/);
   assert.match(content, /unstable_noStore/);
-  assert.match(content, /if \(error\) throw error/);
-  assert.match(content, /if \(error\) throw error;[\s\S]*return undefined/);
+  assert.match(content, /if \(error\) \(\{ data, error \} = await loadDirectIssue\(\)\)/);
+  assert.match(content, /if \(error\) \{[\s\S]*retry = supabase\.from\("magazine_issues"\)/);
   assert.match(supabaseServer, /cache: "no-store"/);
   assert.match(home, /await getLatestIssue\(\)/);
   assert.match(latest, /await getLatestIssue\(\)/);
