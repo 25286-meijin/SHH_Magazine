@@ -45,6 +45,8 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.doesNotMatch(manager, /期號補充資訊（選填）/);
   assert.match(manager, />門診時刻表 PDF 頁次</);
   assert.match(manager, /下架/);
+  assert.match(manager, /下架後的新一期<select value=\{replacementLatestId\}/);
+  assert.doesNotMatch(manager, /下架後的新一期<select required/);
   assert.match(manager, /status !== "scheduled" && issue\.status !== "archived"/);
   assert.doesNotMatch(manager, /MAGAZINE MANAGEMENT/);
   assert.doesNotMatch(manager, /新增或更新醫訊資料，只需上傳 PDF/);
@@ -54,6 +56,16 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.match(issueApi, /original_issue_id/);
   assert.match(issueApi, /pdfjs-dist\/legacy\/build\/pdf\.worker\.mjs/);
   assert.match(uploadApi, /createSignedUploadUrl/);
+});
+
+test("replacement latest validation applies only to the archive action", async () => {
+  const issueApi = await source("app/api/admin/issues/route.ts");
+  const saveSection = issueApi.slice(issueApi.indexOf("async function saveIssue"), issueApi.indexOf("async function archiveIssue"));
+  const archiveSection = issueApi.slice(issueApi.indexOf("async function archiveIssue"));
+
+  assert.doesNotMatch(saveSection, /replacement_latest_issue_id/);
+  assert.match(archiveSection, /replacement_latest_issue_id/);
+  assert.match(archiveSection, /if \(issue\.is_latest\)/);
 });
 
 test("scheduled publishing is additive, retryable, and driven by Supabase cron", async () => {
@@ -112,8 +124,10 @@ test("public issue data uses uncached Supabase state with an unconfigured legacy
   assert.match(content, /if \(error\) \(\{ data, error \} = await loadDirectIssue\(\)\)/);
   assert.match(content, /if \(error\) \{[\s\S]*retry = supabase\.from\("magazine_issues"\)/);
   assert.match(supabaseServer, /cache: "no-store"/);
-  assert.match(home, /await getLatestIssue\(\)/);
+  assert.doesNotMatch(home, /getLatestIssue/);
+  assert.match(home, /const archive = await getPublishedIssues\(\);[\s\S]*const latest = archive\[0\]/);
+  assert.match(content, /cache\(async \(id: string\)/);
   assert.match(latest, /await getLatestIssue\(\)/);
   assert.match(qrApi, /await getQrEligibleIssue\(issueId\)/);
-  assert.match(analyticsApi, /await getIssue\(issueId\)/);
+  assert.match(analyticsApi, /from\("magazine_issues"\)[\s\S]*\.eq\("status", "published"\)/);
 });

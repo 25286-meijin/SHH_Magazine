@@ -280,7 +280,7 @@ export default function IssueManager({
           <button className="button primary" type="submit" disabled={busy}>確認發布</button>
         </div>
         {selected && <div className="archive-controls">
-          {selected.is_latest && <label>下架後的新一期<select required value={replacementLatestId} onChange={event => setReplacementLatestId(event.target.value)}><option value="">請選擇已發布期號</option>{publishedReplacements.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.homepage_headline}</option>)}</select></label>}
+          {selected.is_latest && <label>下架後的新一期<select value={replacementLatestId} onChange={event => setReplacementLatestId(event.target.value)}><option value="">請選擇已發布期號</option>{publishedReplacements.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.homepage_headline}</option>)}</select></label>}
           <button type="button" className="danger-button" disabled={busy || (selected.is_latest && !replacementLatestId)} onClick={() => void archiveSelected()}>下架這一期</button>
         </div>}
       </form>

@@ -13,9 +13,11 @@ type Count = { topic_title?: string; placement_name?: string; qr_entries: number
 
 export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
   const [mode, setMode] = useState<"qr" | "analytics" | "issues">("analytics");
+  const [issuesOpened, setIssuesOpened] = useState(false);
   const [issueOptions, setIssueOptions] = useState(issues);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [routes, setRoutes] = useState<QrRoute[]>([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [createdQrId, setCreatedQrId] = useState("");
   const [createdPreviewPath, setCreatedPreviewPath] = useState("");
   const publishedIssues = useMemo(() => issueOptions
@@ -40,6 +42,7 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
     ]);
     setPlacements(catalog.placements ?? []);
     setRoutes(qrRoutes.routes ?? []);
+    setCatalogLoaded(true);
     setMessage("");
   }, []);
 
@@ -69,13 +72,15 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
   }, []);
 
   useEffect(() => {
+    if (mode !== "qr" || catalogLoaded) return;
     void reloadCatalog().catch((error: Error) => setMessage(error.message));
-  }, [reloadCatalog]);
+  }, [mode, catalogLoaded, reloadCatalog]);
 
   useEffect(() => {
+    if (mode !== "analytics" || analyticsLoaded) return;
     const latestIssueId = publishedIssues[0]?.issue_id;
     if (latestIssueId) void loadAnalytics(latestIssueId);
-  }, [publishedIssues, loadAnalytics]);
+  }, [mode, analyticsLoaded, publishedIssues, loadAnalytics]);
 
   async function createRoute(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,17 +121,18 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
   }
 
   return <main className="admin-shell"><div className="wrap">
-    <header className="admin-nav"><div className="logo"><span className="mark">SHH</span>雙和醫院公播掃碼追蹤系統 <span className="badge">ADMIN</span></div><button className="text-button" onClick={logout}>登出</button></header>
+    <header className="admin-nav"><div className="logo"><span className="mark">SHH</span>雙和醫院公播管理系統 <span className="badge">ADMIN</span></div><button className="text-button" onClick={logout}>登出</button></header>
     <div className="admin-title"><div><p className="eyebrow">SECURE QR ANALYTICS</p><h1>雙和醫院公播管理系統</h1></div></div>
 
     <nav className="admin-mode-nav" aria-label="後台功能">
       <button type="button" className={mode === "analytics" ? "selected" : ""} aria-pressed={mode === "analytics"} onClick={() => setMode("analytics")}>掃碼統計</button>
       <button type="button" className={mode === "qr" ? "selected" : ""} aria-pressed={mode === "qr"} onClick={() => setMode("qr")}>QR Code 管理</button>
-      <button type="button" className={mode === "issues" ? "selected" : ""} aria-pressed={mode === "issues"} onClick={() => setMode("issues")}>醫訊管理</button>
+      <button type="button" className={mode === "issues" ? "selected" : ""} aria-pressed={mode === "issues"} onClick={() => { setMode("issues"); setIssuesOpened(true); }}>醫訊管理</button>
     </nav>
     {message && <p className="admin-message" role="status">{message}</p>}
 
-    {mode === "issues" ? <IssueManager onIssuesChanged={setIssueOptions} /> : mode === "qr" ? <>
+    {issuesOpened && <div hidden={mode !== "issues"}><IssueManager onIssuesChanged={setIssueOptions} /></div>}
+    {mode === "qr" ? <>
       <section className="admin-section"><p className="section-description">依序選擇月份、輸入主題與頁碼、再選擇公播區域。</p>
         <form className="panel admin-form qr-form" onSubmit={createRoute}>
           <label>1. 醫訊月份<select name="issue_id" required defaultValue=""><option value="" disabled>請選擇</option>{qrIssues.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.title}{issue.status === "scheduled" ? "（排程中）" : ""}</option>)}</select></label>
@@ -142,12 +148,12 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
         <div className="table-wrap panel qr-routes-table-wrap"><div className="qr-routes-scroll"><table><thead><tr><th>月份</th><th>醫訊主題</th><th>導入頁碼</th><th>公播區域</th><th>QR ID</th><th>狀態</th><th>下載／管理</th></tr></thead><tbody>{activeRoutes.map(route => <tr key={route.qr_id}><td>{route.topic.issue_id}</td><td>{route.topic.title}</td><td>{route.topic.page_number ?? "原目的地"}</td><td>{route.placement.name}</td><td><code>{route.qr_id}</code></td><td>啟用</td><td><a className="download-link" href={`/api/admin/qr-routes/${route.qr_id}/image?format=png&download=1`}>PNG</a><a className="download-link" href={`/api/admin/qr-routes/${route.qr_id}/image?format=svg&download=1`}>SVG</a><a className="download-link" href={`/admin/preview/issues/${encodeURIComponent(route.topic.issue_id)}?page=${route.topic.page_number ?? 1}`} target="_blank" rel="noreferrer">預覽導入頁面</a><button className="danger-link" type="button" onClick={() => deactivateRoute(route.qr_id)}>停用 QR</button></td></tr>)}{!activeRoutes.length && <tr><td colSpan={7}>尚未建立 QR Code。</td></tr>}</tbody></table></div></div>
       </section>
 
-    </> : <>
+    </> : mode === "analytics" ? <>
       <section className="admin-section"><label className="section-description analytics-filter">先選擇醫訊月份<select value={analyticsIssueId} onChange={event => void loadAnalytics(event.target.value)}><option value="">請選擇</option>{publishedIssues.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.title}</option>)}</select></label>
         {!analyticsLoaded ? <div className="panel empty-state">正在載入最新一期掃碼統計…</div> : <><div className="kpis compact-kpis"><article className="scan-total-card"><h2 className="statistics-section-title">QR Code 掃碼總次數</h2><strong className="scan-total-value"><span className="scan-total-number accent">{total}</span> 次</strong></article></div><div className="two-panels"><CountPanel title="掃碼主題統計" rows={sortCounts(topicCounts).map(item => [item.topic_title ?? "—", item.qr_entries])} /><CountPanel title="掃碼區域統計" rows={sortCounts(placementCounts).map(item => [item.placement_name ?? "—", item.qr_entries])} /></div>
           <h2 className="statistics-section-title records-title">完整掃碼紀錄</h2><div className="table-wrap panel records-table-wrap"><div className="records-scroll"><table><thead><tr><th>掃碼時間</th><th>掃碼主題</th><th>公播區域</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTaipeiTime(entry.received_at_utc)}</td><td>{entry.topic_title}</td><td>{entry.placement_name}</td></tr>)}{!entries.length && <tr><td colSpan={3}>這個月份目前沒有 QR 導入紀錄。</td></tr>}</tbody></table></div></div><p className="note">時間顯示為 Asia/Taipei。</p></>}
       </section>
-    </>}
+    </> : null}
   </div></main>;
 }
 

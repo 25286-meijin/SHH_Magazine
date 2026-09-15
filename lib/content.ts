@@ -1,6 +1,7 @@
 import issuesData from "@/data/issues.demo.json";
 import qrData from "@/data/qr-routes.demo.json";
 import { unstable_noStore } from "next/cache";
+import { cache } from "react";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 export type IssueStatus = "draft" | "scheduled" | "published" | "archived";
@@ -113,7 +114,7 @@ export async function getLatestIssue(): Promise<Issue> {
   return latest;
 }
 
-export async function getIssue(id: string): Promise<Issue | undefined> {
+export const getIssue = cache(async (id: string): Promise<Issue | undefined> => {
   unstable_noStore();
   const supabase = createServiceSupabaseClient();
   if (supabase) {
@@ -150,7 +151,7 @@ export async function getIssue(id: string): Promise<Issue | undefined> {
     return undefined;
   }
   return legacyIssues.find((issue) => issue.issue_id === id && issue.status === "published");
-}
+});
 
 export function getQrRoute(id: string): QrRoute | undefined {
   return qrRoutes.find((route) => route.qr_id === id && route.active);
