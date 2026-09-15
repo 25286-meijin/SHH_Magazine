@@ -157,11 +157,12 @@ test("admin uses the approved system name and shows only requested scan statisti
     source("app/globals.css"),
   ]);
 
-  assert.match(page, /雙和醫院公播掃碼追蹤系統/);
+  assert.match(page, /雙和醫院公播管理系統/);
   assert.match(login, /雙和醫院公播管理系統/);
   assert.match(login, /只有經核准並具有 admin 角色的帳號可以查看。/);
   assert.doesNotMatch(login, /QR 紀錄與統計/);
   assert.match(dashboard, /雙和醫院公播管理系統/);
+  assert.doesNotMatch(`${page}\n${login}\n${dashboard}`, /雙和醫院公播掃碼追蹤系統/);
   assert.match(dashboard, /QR Code 掃碼總次數/);
   assert.match(dashboard, /掃碼主題統計/);
   assert.match(dashboard, /掃碼區域統計/);
@@ -175,6 +176,27 @@ test("admin uses the approved system name and shows only requested scan statisti
   assert.doesNotMatch(dashboard.slice(dashboard.indexOf("完整掃碼紀錄")), /<th>QR ID<\/th>/);
   assert.match(dashboard, /right\.qr_entries - left\.qr_entries/);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.admin-nav \.logo/);
+});
+
+test("admin defers QR data and fetches only the records shown by each view", async () => {
+  const [dashboard, catalog, qrRoutes, analytics] = await Promise.all([
+    source("components/AdminDashboard.tsx"),
+    source("app/api/admin/catalog/route.ts"),
+    source("app/api/admin/qr-routes/route.ts"),
+    source("app/api/admin/analytics/route.ts"),
+  ]);
+  const catalogGet = catalog.slice(catalog.indexOf("export async function GET"), catalog.indexOf("export async function POST"));
+  const qrGet = qrRoutes.slice(qrRoutes.indexOf("export async function GET"), qrRoutes.indexOf("export async function POST"));
+
+  assert.match(dashboard, /if \(mode !== "qr" \|\| catalogLoaded\) return/);
+  assert.match(dashboard, /setCatalogLoaded\(true\)/);
+  assert.match(dashboard, /issuesOpened && <div hidden=\{mode !== "issues"\}>/);
+  assert.doesNotMatch(catalogGet, /from\("qr_topics"\)/);
+  assert.match(catalogGet, /select\("id,name,description,active"\)/);
+  assert.match(qrGet, /\.eq\("active", true\)/);
+  assert.match(analytics, /Promise\.all\(\[/);
+  assert.match(analytics, /select\("id,received_at_utc,topic_title,placement_name"/);
+  assert.doesNotMatch(analytics, /await getIssue\(issueId\)/);
 });
 
 test("scheduled issues can create permanent QR codes without public tracking before publication", async () => {

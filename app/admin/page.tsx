@@ -1,7 +1,7 @@
 import { getManagedIssues } from "@/lib/content";
 import AdminDashboard from "@/components/AdminDashboard";
 
-export const metadata = { title: "雙和醫院公播掃碼追蹤系統", robots: { index: false, follow: false } };
+export const metadata = { title: "雙和醫院公播管理系統", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {

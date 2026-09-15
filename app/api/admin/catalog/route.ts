@@ -8,18 +8,16 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}
 export async function GET() {
   try {
     const { supabase } = await requireAdmin();
-    const [{ data: topics, error: topicsError }, { data: placements, error: placementsError }] =
-      await Promise.all([
-        supabase.from("qr_topics").select("*").order("created_at", { ascending: false }),
-        supabase.from("placements").select("*").in("name", [...FIXED_QR_PLACEMENTS]),
-      ]);
-    if (topicsError) throw topicsError;
+    const { data: placements, error: placementsError } = await supabase
+      .from("placements")
+      .select("id,name,description,active")
+      .in("name", [...FIXED_QR_PLACEMENTS]);
     if (placementsError) throw placementsError;
     const placementOrder = new Map(FIXED_QR_PLACEMENTS.map((name, index) => [name, index]));
     const orderedPlacements = (placements ?? []).sort(
       (left, right) => (placementOrder.get(left.name) ?? 99) - (placementOrder.get(right.name) ?? 99),
     );
-    return NextResponse.json({ ok: true, topics, placements: orderedPlacements });
+    return NextResponse.json({ ok: true, placements: orderedPlacements });
   } catch (error) {
     return adminErrorResponse(error);
   }

@@ -12,6 +12,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("qr_routes")
       .select("id,qr_id,destination_path,active,created_at,topic:qr_topics(id,issue_id,title,page_number),placement:placements(id,name)")
+      .eq("active", true)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return NextResponse.json({ ok: true, routes: data, siteUrl: getPublicSiteUrl() });
