@@ -118,8 +118,8 @@ test("issue cards use large dates, secondary themes, and visible cover shadows",
     readFile(new URL("../app/issues/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(home, /<strong>\{issue\.year\} 年 \{String\(issue\.month\)/);
-  assert.match(home, /<span>\{issue\.homepage_headline\}/);
+  assert.match(home, /<strong>[\s\S]*\{issue\.year\} 年 \{String\(issue\.month\)/);
+  assert.match(home, /<span>[\s\S]*\{issue\.homepage_headline\}/);
   assert.match(archive, /<strong>\{i\.year\} 年 \{String\(i\.month\)/);
   assert.match(archive, /<span>\{i\.homepage_headline\}<\/span>/);
   assert.match(css, /\.cover-small\{box-shadow:(?!none)/);
@@ -175,6 +175,25 @@ test("the issue archive provides a visible return-home button", async () => {
   );
   assert.match(archive, /className="button secondary" href="\/"/);
   assert.match(archive, /返回首頁/);
+});
+
+test("homepage integrates the Smart Health Hospital vision before the archive", async () => {
+  const [home, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(home, /className="smart-health"/);
+  assert.match(home, /從雙和醫院，到智慧健康醫院/);
+  assert.match(home, /Smart Health Hospital/);
+  assert.match(home, /From Smart Hospital to Smart Health/);
+  assert.match(home, /智慧醫療・健康全人・人本照護/);
+  assert.match(home, /label: "SMART"[\s\S]*title: "智慧醫療・科技賦能"/);
+  assert.match(home, /label: "HEALTH"[\s\S]*title: "從治病走向全人健康"/);
+  assert.match(home, /label: "HOSPITAL"[\s\S]*title: "智慧、溫暖、高效的雙和"/);
+  assert.ok(home.indexOf("<SmartHealthSection />") < home.indexOf('className="archive"'));
+  assert.match(css, /\.smart-health-grid\{[^}]*grid-template-columns:repeat\(3,1fr\)/);
+  assert.match(css, /\.smart-health-grid\{grid-template-columns:1fr\}/);
 });
 
 test("desktop reader zoom scales beyond its default maximum width", async () => {

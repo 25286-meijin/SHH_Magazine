@@ -12,3 +12,26 @@
 @media(max-width:760px){.admin-section .statistics-section-title{font-size:22px}.scan-total-value{font-size:22px!important}.count-panel{grid-template-columns:minmax(132px,.9fr) minmax(0,1.1fr);column-gap:12px}}
 .section-heading-row{display:flex;align-items:center;justify-content:space-between;gap:16px}.section-heading-row h2{margin-bottom:10px}.issue-management-actions{justify-content:flex-end}.issue-manager-grid{display:grid;grid-template-columns:minmax(240px,.55fr) minmax(0,1.45fr);gap:16px;align-items:start;margin-top:18px}.issue-list{display:grid;max-height:760px;overflow-y:auto}.issue-list>button{border:0;border-bottom:1px solid var(--line);background:white;padding:15px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;color:var(--ink)}.issue-list>button:hover,.issue-list>button.selected{background:var(--brand-soft)}.issue-list>button span{display:grid;gap:5px;min-width:0}.issue-list>button small{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.issue-list>button em{font-size:11px;color:var(--brand);font-style:normal;white-space:nowrap}.issue-form small{color:var(--muted);font-weight:500}.check-row{display:flex!important;grid-template-columns:auto 1fr;align-items:center;gap:9px!important}.check-row input{width:auto!important}.upload-summary{margin:0;color:var(--brand);font-weight:800}.generated-cover{display:grid;gap:10px;width:min(100%,260px);color:var(--muted);font-size:13px}.generated-cover img{width:220px;height:auto;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 20px rgba(23,48,41,.12)}.issue-actions{margin-top:0}.archive-controls{border-top:1px solid var(--line);padding-top:16px;display:grid;gap:12px}.danger-button{justify-self:start;border:1px solid #b42318;background:white;color:#b42318;border-radius:999px;padding:11px 17px;font-weight:800;cursor:pointer}.danger-button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:760px){.admin-mode-nav{grid-template-columns:1fr}.section-heading-row{align-items:flex-start;flex-direction:column}.issue-manager-grid{grid-template-columns:1fr}.issue-list{max-height:320px}.generated-cover{margin-inline:auto}.generated-cover img{width:min(100%,220px)}}
+
+.smart-health{position:relative;overflow:hidden;background:linear-gradient(135deg,#102a3a 0%,#123b38 100%);color:var(--white)}
+.smart-health::before{content:"";position:absolute;width:430px;height:430px;right:-150px;top:-230px;border:1px solid rgba(115,221,206,.2);border-radius:50%;box-shadow:0 0 0 74px rgba(115,221,206,.035),0 0 0 148px rgba(115,221,206,.025)}
+.smart-health .wrap{position:relative;z-index:1}
+.smart-health .eyebrow{color:#73ddce}
+.smart-health-heading{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(300px,.88fr);gap:64px;align-items:end}
+.smart-health-heading h2{max-width:650px;margin:10px 0 0;font-size:clamp(40px,5vw,62px);line-height:1.08;letter-spacing:-.045em}
+.smart-health-name{padding-left:26px;border-left:3px solid var(--brand)}
+.smart-health-name strong{display:block;font-size:clamp(25px,3vw,34px);line-height:1.15;letter-spacing:-.025em}
+.smart-health-name span{display:block;margin-top:8px;color:#c5d9d7;font-size:14px;letter-spacing:.02em}
+.smart-health-name p{margin:22px 0 0;color:#73ddce;font-weight:800;letter-spacing:.06em}
+.smart-health-quote{margin:42px 0 28px;padding:23px 28px;border:1px solid rgba(115,221,206,.2);border-radius:20px;background:linear-gradient(110deg,rgba(0,159,168,.22),rgba(255,255,255,.055));box-shadow:0 18px 45px rgba(3,18,24,.16);font-size:clamp(20px,2.3vw,29px);line-height:1.5;letter-spacing:-.02em}
+.smart-health-quote strong,.smart-health-quote span{display:block}
+.smart-health-quote span{color:#c5d9d7}
+.smart-health-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.smart-health-card{min-height:260px;padding:25px;border:1px solid rgba(255,255,255,.55);border-radius:20px;background:rgba(255,255,255,.97);color:var(--ink);box-shadow:0 20px 45px rgba(3,18,24,.18)}
+.smart-health-card header>span{display:inline-block;padding:6px 9px;border-radius:999px;background:var(--brand-soft);color:#08777d;font-size:11px;font-weight:900;letter-spacing:.12em}
+.smart-health-card h3{margin:14px 0 20px;font-size:21px;line-height:1.35;letter-spacing:-.025em}
+.smart-health-card ul{display:grid;gap:11px;margin:0;padding:0;list-style:none;color:var(--muted);line-height:1.55}
+.smart-health-card li{position:relative;padding-left:17px}
+.smart-health-card li::before{content:"";position:absolute;left:0;top:.65em;width:6px;height:6px;border-radius:50%;background:var(--brand)}
+
+@media(max-width:760px){.smart-health-heading{grid-template-columns:1fr;gap:25px}.smart-health-heading h2{font-size:40px}.smart-health-name{padding:22px 0 0;border-left:0;border-top:1px solid rgba(115,221,206,.25)}.smart-health-name p{margin-top:18px}.smart-health-quote{margin:30px 0 20px;padding:20px;font-size:20px}.smart-health-grid{grid-template-columns:1fr}.smart-health-card{min-height:0}}
