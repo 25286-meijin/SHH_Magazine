@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Cover } from "@/components/Cover";
-import { PublicFooter } from "@/components/PublicFooter";
 import { PublicHeader } from "@/components/PublicHeader";
 import { getPublishedIssues } from "@/lib/content";
 
@@ -9,17 +8,20 @@ export const dynamic = "force-dynamic";
 const smartHealthPillars = [
   {
     label: "SMART",
-    title: "智慧醫療・科技賦能",
+    title: "智慧醫療，科技賦能",
+    footer: "Smart",
     items: ["AI 輔助診斷與臨床決策", "數位醫療、遠距照護", "智慧病房、智慧物流"],
   },
   {
     label: "HEALTH",
     title: "從治病走向全人健康",
+    footer: "Health",
     items: ["健康促進、精準健康", "健康老化、慢病管理", "心理健康、營養體重"],
   },
   {
     label: "HOSPITAL",
     title: "智慧、溫暖、高效的雙和",
+    footer: "Hospital",
     items: ["病人為中心、無縫照護", "幸福職場", "永續經營（ESG）"],
   },
 ];
@@ -86,8 +88,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <SmartHealthSection />
-
         <section className="archive">
           <div className="wrap">
             <div className="section-head">
@@ -113,8 +113,9 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <SmartHealthSection />
       </main>
-      <PublicFooter />
     </>
   );
 }
@@ -143,18 +144,55 @@ function SmartHealthSection() {
         <div className="smart-health-grid">
           {smartHealthPillars.map((pillar) => (
             <article className="smart-health-card" key={pillar.label}>
+              <PillarIcon pillar={pillar.label} />
+              <span className="smart-health-letter" aria-hidden="true">{pillar.label[0]}</span>
               <header>
-                <span>{pillar.label}</span>
-                <h3>{pillar.label}｜{pillar.title}</h3>
+                <h3>{pillar.label}</h3>
+                <p>{pillar.title}</p>
               </header>
               <ul>
                 {pillar.items.map((item) => <li key={item}>{item}</li>)}
               </ul>
+              <div className="smart-health-card-footer">{pillar.footer}</div>
             </article>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function PillarIcon({ pillar }: { pillar: string }) {
+  if (pillar === "SMART") {
+    return (
+      <span className="smart-health-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <rect x="14" y="12" width="20" height="24" rx="3" />
+          <rect x="20" y="18" width="8" height="12" rx="1" />
+          <path d="M9 17h5M9 24h5M9 31h5M34 17h5M34 24h5M34 31h5" />
+        </svg>
+      </span>
+    );
+  }
+
+  if (pillar === "HEALTH") {
+    return (
+      <span className="smart-health-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <path d="M8 24h8l4-8 7 17 5-9h8" />
+          <path d="M11 13c4-4 10-3 13 2 3-5 9-6 13-2 5 5 3 12-1 16L24 40 12 29c-4-4-6-11-1-16Z" />
+        </svg>
+      </span>
+    );
+  }
+
+  return (
+    <span className="smart-health-icon" aria-hidden="true">
+      <svg viewBox="0 0 48 48">
+        <path d="M11 39V16h26v23M18 39v-7h12v7M19 22h3M26 22h3M19 27h3M26 27h3" />
+        <path d="M21 16V9h6v7M20 12h8M24 8v8" />
+      </svg>
+    </span>
   );
 }
 

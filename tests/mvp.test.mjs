@@ -177,7 +177,7 @@ test("the issue archive provides a visible return-home button", async () => {
   assert.match(archive, /返回首頁/);
 });
 
-test("homepage integrates the Smart Health Hospital vision before the archive", async () => {
+test("homepage ends with the reference-inspired Smart Health Hospital vision", async () => {
   const [home, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -188,12 +188,18 @@ test("homepage integrates the Smart Health Hospital vision before the archive", 
   assert.match(home, /Smart Health Hospital/);
   assert.match(home, /From Smart Hospital to Smart Health/);
   assert.match(home, /智慧醫療・健康全人・人本照護/);
-  assert.match(home, /label: "SMART"[\s\S]*title: "智慧醫療・科技賦能"/);
+  assert.match(home, /label: "SMART"[\s\S]*title: "智慧醫療，科技賦能"/);
   assert.match(home, /label: "HEALTH"[\s\S]*title: "從治病走向全人健康"/);
   assert.match(home, /label: "HOSPITAL"[\s\S]*title: "智慧、溫暖、高效的雙和"/);
-  assert.ok(home.indexOf("<SmartHealthSection />") < home.indexOf('className="archive"'));
+  assert.ok(home.indexOf('className="archive"') < home.indexOf("<SmartHealthSection />"));
+  assert.doesNotMatch(home, /PublicFooter|健康知識，|雙和醫訊 · Shuang Ho News/);
+  assert.match(home, /className="smart-health-icon"/);
+  assert.match(home, /className="smart-health-letter"/);
+  assert.match(home, /className="smart-health-card-footer"/);
+  assert.match(home, /<PillarIcon pillar=\{pillar\.label\}/);
   assert.match(css, /\.smart-health-grid\{[^}]*grid-template-columns:repeat\(3,1fr\)/);
-  assert.match(css, /\.smart-health-grid\{grid-template-columns:1fr\}/);
+  assert.match(css, /\.smart-health-grid\{grid-template-columns:1fr[^}]*\}/);
+  assert.match(css, /\.smart-health-card\{[^}]*min-height:490px/);
 });
 
 test("desktop reader zoom scales beyond its default maximum width", async () => {
