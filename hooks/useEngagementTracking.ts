@@ -5,9 +5,10 @@ import { useCallback, useEffect, useRef } from "react";
 type Context = {
   issueId: string;
   entryId: string | null;
+  enabled?: boolean;
 };
 
-export function useEngagementTracking({ issueId, entryId }: Context) {
+export function useEngagementTracking({ issueId, entryId, enabled = true }: Context) {
   const sessionId = useRef<string>();
   const sessionStartedAt = useRef(Date.now());
   const activeMilliseconds = useRef(0);
@@ -26,6 +27,7 @@ export function useEngagementTracking({ issueId, entryId }: Context) {
 
   const track = useCallback(
     (event: string, extra: Record<string, unknown> = {}) => {
+      if (!enabled) return;
       try {
         const body = JSON.stringify({
           event,
@@ -53,10 +55,11 @@ export function useEngagementTracking({ issueId, entryId }: Context) {
         // Analytics must never interrupt reading.
       }
     },
-    [entryId, issueId],
+    [enabled, entryId, issueId],
   );
 
   useEffect(() => {
+    if (!enabled) return;
     const markActivity = () => {
       lastActivityAt.current = Date.now();
     };
@@ -84,7 +87,7 @@ export function useEngagementTracking({ issueId, entryId }: Context) {
       document.removeEventListener("visibilitychange", flush);
       window.removeEventListener("pagehide", flush);
     };
-  }, [tick, track]);
+  }, [enabled, tick, track]);
 
   return track;
 }

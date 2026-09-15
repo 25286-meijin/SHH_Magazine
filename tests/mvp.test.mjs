@@ -30,9 +30,11 @@ test("registration destinations use the official HTTPS host", async () => {
   }
 });
 
-test("admin authentication fails closed when credentials are absent", async () => {
+test("admin authentication fails closed when Supabase is absent", async () => {
   const middleware = await readFile(new URL("../middleware.ts", import.meta.url), "utf8");
-  assert.match(middleware, /if \(!user \|\| !password\)[\s\S]*status: 503/);
+  assert.match(middleware, /if \(!config\)[\s\S]*status: 503/);
+  assert.match(middleware, /app_metadata\.role === "admin"/);
+  assert.match(middleware, /"\/api\/admin\/:path\*"/);
   assert.doesNotMatch(middleware, /localStorage|searchParams.*password/);
 });
 
@@ -197,4 +199,16 @@ test("mobile reader pages use each PDF page's real aspect ratio", async () => {
   assert.match(reader, /setPageRatio\(viewport\.width \/ viewport\.height\)/);
   assert.match(reader, /aspectRatio: pageRatio/);
   assert.match(reader, /minHeight: pageRatio \? 0 : undefined/);
+});
+
+test("reader waits for preceding page ratios before scrolling to a requested page", async () => {
+  const reader = await readFile(
+    new URL("../components/PdfReader.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(reader, /precedingPagesMeasured/);
+  assert.match(reader, /measuredPages\.has\(page\)/);
+  assert.match(reader, /requestAnimationFrame/);
+  assert.match(reader, /scrollIntoView\(\{ block: "start" \}\)/);
 });

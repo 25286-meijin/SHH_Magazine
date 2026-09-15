@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackServerEvent } from "@/lib/tracking";
+import { recordClientEvent } from "@/lib/tracking";
 
 const clientEvents = new Set([
   "read_start",
@@ -24,10 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    await trackServerEvent({
-      ...payload,
-      received_at_utc: new Date().toISOString(),
-    }).catch(() => undefined);
+    await recordClientEvent(payload).catch(() => undefined);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });

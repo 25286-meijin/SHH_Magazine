@@ -3,15 +3,16 @@ import { PdfReader } from "@/components/PdfReader";
 import { getIssue, safeEntryId } from "@/lib/content";
 
 export const metadata = { robots: { index: false, follow: true } };
+export const dynamic = "force-dynamic";
 
-export default function ReadPage({
+export default async function ReadPage({
   params,
   searchParams,
 }: {
   params: { issueId: string };
   searchParams: { page?: string; entry_id?: string | string[] };
 }) {
-  const issue = getIssue(params.issueId);
+  const issue = await getIssue(params.issueId);
   if (!issue) notFound();
 
   return (

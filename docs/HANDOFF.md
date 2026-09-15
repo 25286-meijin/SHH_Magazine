@@ -1,6 +1,6 @@
 # SHH Magazine MVP Handoff
 
-Last verified: 2026-09-08 (Asia/Taipei)
+Last verified: 2026-09-14 (Asia/Taipei)
 
 First-time Codex users should begin with `docs/COLLEAGUE_QUICKSTART.md`.
 
@@ -29,6 +29,11 @@ The public homepage, archive, issue pages, PDF reader, outpatient route, and shu
 - Opaque `entry_id`, server-side QR entry timestamp, reader progress, visibility/idle-aware engagement heartbeat, and best-effort event delivery.
 - Protected Admin route and demo-only analytics dashboard layout.
 - Public Vercel deployment with deployment-level SSO disabled.
+- Supabase-backed QR Code management and protected scan statistics on the test branch.
+- `/admin` magazine management for create/edit, PDF upload, automatic first-page JPG cover, draft/publish/latest/archive, with legacy issue fallback.
+- Asia/Taipei scheduled publishing via Supabase Cron, scheduled-issue QR preparation, and an admin-only reader preview that disables tracking.
+
+The magazine-management code and migrations are on the test branch. Both migrations were executed successfully in the Supabase test project, and the scheduling Cron job is active once per minute. The Preview can read the four existing issues. The admin and public page-routing layouts passed 375/390px browser checks. An actual PDF upload/save and scheduled publish remain for owner acceptance because validation did not rewrite an existing issue or create fabricated content. Formal Vercel remains unchanged.
 
 ## Known gaps and blockers
 
@@ -59,14 +64,15 @@ Default local URL: <http://localhost:3000>
 
 Never commit `.env.local`. Set a long random Admin password and keep all real secrets outside Git.
 
-## Adding the next issue
+## Adding the next issue (after test migration approval)
 
-1. Add the PDF to `public/demo/issues/YYYY-MM.pdf` or replace the storage strategy with an approved public asset host.
-2. Add the cover to `public/demo/covers/YYYY-MM.jpg`.
-3. Add a `published` record to `data/issues.demo.json` with verified title, summary, publish date, and PDF page indices for outpatient and shuttle information.
-4. Update creative, placement, and QR route data only after final IDs and destinations are approved.
-5. Test at 375px and 390px. Confirm cover ratio, mixed PDF page ratios, zoom, horizontal scrolling, and `?page=N` positioning.
-6. Run the full validation commands below.
+1. Log in to `/admin` and open 「醫訊管理」.
+2. Enter only approved metadata and upload the official PDF.
+3. Verify the generated first-page JPG cover and save a draft or publish.
+4. If setting it as latest, verify the homepage, outpatient and shuttle links.
+5. Test at 375px and 390px, then run the full validation commands below.
+
+Existing repository PDFs and covers do not need to move. See `docs/MAGAZINE_MANAGEMENT_SETUP.md`.
 
 ## Required validation
 

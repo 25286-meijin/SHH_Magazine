@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Issue } from "@/lib/content";
 import { useEngagementTracking } from "@/hooks/useEngagementTracking";
 
@@ -22,16 +22,27 @@ export function PdfReader({
   issue,
   initialPage,
   entryId,
+  trackingEnabled = true,
 }: {
   issue: Issue;
   initialPage: number;
   entryId: string | null;
+  trackingEnabled?: boolean;
 }) {
   const [pdf, setPdf] = useState<PdfDocument>();
   const [error, setError] = useState(false);
   const [scale, setScale] = useState(1);
+  const [measuredPages, setMeasuredPages] = useState<Set<number>>(() => new Set());
   const milestones = useRef(new Set<number>());
-  const track = useEngagementTracking({ issueId: issue.issue_id, entryId });
+  const track = useEngagementTracking({ issueId: issue.issue_id, entryId, enabled: trackingEnabled });
+  const markPageMeasured = useCallback((page: number) => {
+    setMeasuredPages((current) => {
+      if (current.has(page)) return current;
+      const next = new Set(current);
+      next.add(page);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,13 +87,23 @@ export function PdfReader({
   }, [track]);
 
   useEffect(() => {
-    if (pdf && initialPage <= pdf.numPages) {
-      window.setTimeout(
-        () => document.getElementById(`page-${initialPage}`)?.scrollIntoView(),
-        100,
-      );
-    }
-  }, [pdf, initialPage]);
+    if (!pdf || initialPage > pdf.numPages) return;
+    const precedingPagesMeasured = Array.from(
+      { length: initialPage },
+      (_, index) => index + 1,
+    ).every((page) => measuredPages.has(page));
+    if (!precedingPagesMeasured) return;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        document.getElementById(`page-${initialPage}`)?.scrollIntoView({ block: "start" });
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [pdf, initialPage, measuredPages]);
 
   return (
     <main className="reader">
@@ -110,7 +131,12 @@ export function PdfReader({
             }}
           >
             {Array.from({ length: pdf.numPages }, (_, index) => (
-              <PdfPage pdf={pdf} page={index + 1} key={index} />
+              <PdfPage
+                pdf={pdf}
+                page={index + 1}
+                key={index}
+                onMeasured={markPageMeasured}
+              />
             ))}
           </div>
         </div>
@@ -134,7 +160,15 @@ function ReaderError({ issue }: { issue: Issue }) {
   );
 }
 
-function PdfPage({ pdf, page }: { pdf: PdfDocument; page: number }) {
+function PdfPage({
+  pdf,
+  page,
+  onMeasured,
+}: {
+  pdf: PdfDocument;
+  page: number;
+  onMeasured: (page: number) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [shouldRender, setShouldRender] = useState(false);
   const [pageRatio, setPageRatio] = useState<number>();
@@ -145,11 +179,12 @@ function PdfPage({ pdf, page }: { pdf: PdfDocument; page: number }) {
       if (cancelled) return;
       const viewport = pdfPage.getViewport({ scale: 1 });
       setPageRatio(viewport.width / viewport.height);
+      onMeasured(page);
     }).catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [page, pdf]);
+  }, [onMeasured, page, pdf]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
