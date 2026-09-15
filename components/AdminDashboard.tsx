@@ -121,8 +121,8 @@ export default function AdminDashboard({ issues }: { issues: IssueOption[] }) {
   }
 
   return <main className="admin-shell"><div className="wrap">
-    <header className="admin-nav"><div className="logo"><span className="mark">SHH</span>雙和醫院公播管理系統 <span className="badge">ADMIN</span></div><button className="text-button" onClick={logout}>登出</button></header>
-    <div className="admin-title"><div><p className="eyebrow">SECURE QR ANALYTICS</p><h1>雙和醫院公播管理系統</h1></div></div>
+    <header className="admin-nav"><div className="logo"><span className="mark">SHH</span>雙和醫院公播醫訊管理系統 <span className="badge">ADMIN</span></div><button className="text-button" onClick={logout}>登出</button></header>
+    <div className="admin-title"><div><p className="eyebrow">SECURE QR ANALYTICS</p><h1>雙和醫院公播醫訊管理系統</h1></div></div>
 
     <nav className="admin-mode-nav" aria-label="後台功能">
       <button type="button" className={mode === "analytics" ? "selected" : ""} aria-pressed={mode === "analytics"} onClick={() => setMode("analytics")}>掃碼統計</button>

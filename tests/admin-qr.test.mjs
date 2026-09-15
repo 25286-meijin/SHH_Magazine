@@ -157,11 +157,13 @@ test("admin uses the approved system name and shows only requested scan statisti
     source("app/globals.css"),
   ]);
 
-  assert.match(page, /雙和醫院公播管理系統/);
-  assert.match(login, /雙和醫院公播管理系統/);
+  assert.match(page, /雙和醫院公播醫訊管理系統/);
+  assert.match(login, /雙和醫院公播醫訊管理系統/);
   assert.match(login, /只有經核准並具有 admin 角色的帳號可以查看。/);
   assert.doesNotMatch(login, /QR 紀錄與統計/);
-  assert.match(dashboard, /雙和醫院公播管理系統/);
+  assert.match(dashboard, /雙和醫院公播醫訊管理系統/);
+  const previousName = ["雙和醫院公播", "管理系統"].join("");
+  assert.doesNotMatch(`${page}\n${login}\n${dashboard}`, new RegExp(previousName));
   assert.doesNotMatch(`${page}\n${login}\n${dashboard}`, /雙和醫院公播掃碼追蹤系統/);
   assert.match(dashboard, /QR Code 掃碼總次數/);
   assert.match(dashboard, /掃碼主題統計/);
