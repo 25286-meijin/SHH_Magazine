@@ -214,6 +214,7 @@ test("homepage ends with a compact Smart Health Hospital brand banner", async ()
   assert.doesNotMatch(home, /摘錄自院長10月文章|smartHealthPillars|PillarIcon|smart-health-card/);
   assert.match(css, /\.smart-health-banner\{[^}]*grid-template-columns:minmax\(300px,28%\) minmax\(0,1fr\)/);
   assert.match(css, /\.smart-health-copy\{[^}]*grid-template-columns:minmax\(0,1\.65fr\) minmax\(300px,1fr\)/);
+  assert.match(css, /@media\(min-width:1024px\)\{\.smart-health-copy\{align-items:flex-start\}\.smart-health-philosophy\{margin-top:30px\}\}/);
   assert.doesNotMatch(css, /\.smart-health-values\{[^}]*border-top/);
   assert.doesNotMatch(css, /\.smart-health-visual\{[^}]*border-radius/);
   assert.match(css, /\.smart-health-banner\{grid-template-columns:1fr[^}]*\}/);

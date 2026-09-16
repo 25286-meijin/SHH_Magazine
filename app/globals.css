@@ -29,6 +29,7 @@
 .smart-health-values strong{color:#73ddce;font-size:1.12em;letter-spacing:.08em}
 .smart-health-values i{width:1px;height:28px;background:rgba(115,221,206,.62)}
 
+@media(min-width:1024px){.smart-health-copy{align-items:flex-start}.smart-health-philosophy{margin-top:30px}}
 @media(min-width:1500px){.smart-health-title h2{white-space:nowrap}}
 @media(max-width:1100px){.smart-health-banner{grid-template-columns:minmax(250px,30%) minmax(0,1fr)}.smart-health-content{padding:40px 34px 36px 30px}.smart-health-copy{grid-template-columns:minmax(0,1.35fr) minmax(240px,.9fr);gap:28px}.smart-health-title h2{font-size:36px}.smart-health-philosophy{padding-left:24px;font-size:16px}.smart-health-values{gap:16px;margin-top:28px;font-size:14px}}
 @media(max-width:760px){.smart-health-banner{grid-template-columns:1fr;min-height:0}.smart-health-visual{min-height:210px;aspect-ratio:16/9}.smart-health-visual::after{background:linear-gradient(180deg,transparent 50%,rgba(16,45,61,.35) 72%,#12333e 100%)}.smart-health-content{padding:30px 24px 36px}.smart-health-copy{grid-template-columns:1fr;gap:25px}.smart-health-title h2{font-size:36px}.smart-health-philosophy{padding-left:20px;font-size:16px;line-height:1.75}.smart-health-values{align-items:stretch;flex-direction:column;gap:13px;margin-top:30px;white-space:normal}.smart-health-values span{justify-content:space-between}.smart-health-values i{display:none}}
