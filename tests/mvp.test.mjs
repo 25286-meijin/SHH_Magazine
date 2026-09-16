@@ -214,7 +214,13 @@ test("homepage ends with a compact Smart Health Hospital brand banner", async ()
   assert.doesNotMatch(home, /摘錄自院長10月文章|smartHealthPillars|PillarIcon|smart-health-card/);
   assert.match(css, /\.smart-health-banner\{[^}]*grid-template-columns:minmax\(300px,28%\) minmax\(0,1fr\)/);
   assert.match(css, /\.smart-health-copy\{[^}]*grid-template-columns:minmax\(0,1\.65fr\) minmax\(300px,1fr\)/);
-  assert.match(css, /@media\(min-width:1024px\)\{\.smart-health-copy\{align-items:flex-start\}\.smart-health-philosophy\{margin-top:30px\}\}/);
+  assert.match(css, /@media\(min-width:1024px\)\{\.smart-health-content\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\)\}/);
+  assert.match(css, /\.smart-health-copy,\.smart-health-values\{display:contents\}/);
+  assert.match(css, /\.smart-health-title\{grid-column:1\/5;grid-row:1/);
+  assert.match(css, /\.smart-health-philosophy\{grid-column:5\/7;grid-row:1/);
+  assert.match(css, /\.smart-health-values span:nth-of-type\(1\)\{grid-column:1\/3\}/);
+  assert.match(css, /\.smart-health-values span:nth-of-type\(2\)\{grid-column:3\/5/);
+  assert.match(css, /\.smart-health-values span:nth-of-type\(3\)\{grid-column:5\/7/);
   assert.doesNotMatch(css, /\.smart-health-values\{[^}]*border-top/);
   assert.doesNotMatch(css, /\.smart-health-visual\{[^}]*border-radius/);
   assert.match(css, /\.smart-health-banner\{grid-template-columns:1fr[^}]*\}/);
