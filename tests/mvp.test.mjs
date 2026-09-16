@@ -177,29 +177,33 @@ test("the issue archive provides a visible return-home button", async () => {
   assert.match(archive, /返回首頁/);
 });
 
-test("homepage ends with the reference-inspired Smart Health Hospital vision", async () => {
-  const [home, css] = await Promise.all([
+test("homepage ends with a compact Smart Health Hospital brand banner", async () => {
+  const [home, css, hospitalPhoto] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/images/smart-health-hospital.jpg", import.meta.url)),
   ]);
 
   assert.match(home, /className="smart-health"/);
   assert.match(home, /從雙和醫院，到智慧健康醫院/);
-  assert.match(home, /Smart Health Hospital/);
-  assert.match(home, /From Smart Hospital to Smart Health/);
-  assert.match(home, /智慧醫療・健康全人・人本照護/);
-  assert.match(home, /label: "SMART"[\s\S]*title: "智慧醫療，科技賦能"/);
-  assert.match(home, /label: "HEALTH"[\s\S]*title: "從治病走向全人健康"/);
-  assert.match(home, /label: "HOSPITAL"[\s\S]*title: "智慧、溫暖、高效的雙和"/);
+  assert.match(home, /SMART HEALTH HOSPITAL/);
+  assert.match(home, /科技不是主角，健康才是結果；/);
+  assert.match(home, /醫院不是終點，社區才是延伸。/);
+  assert.match(home, /src="\/images\/smart-health-hospital\.jpg"/);
+  assert.match(home, /alt="雙和醫院院區外觀"/);
+  assert.match(home, /className="wrap smart-health-banner"/);
+  assert.match(home, /className="smart-health-visual"/);
+  assert.match(home, /className="smart-health-philosophy"/);
+  assert.match(home, /className="smart-health-values"/);
+  assert.match(home, /<strong>SMART<\/strong>[\s\S]*智慧醫療/);
+  assert.match(home, /<strong>HEALTH<\/strong>[\s\S]*健康全人/);
+  assert.match(home, /<strong>HOSPITAL<\/strong>[\s\S]*人本照護/);
   assert.ok(home.indexOf('className="archive"') < home.indexOf("<SmartHealthSection />"));
   assert.doesNotMatch(home, /PublicFooter|健康知識，|雙和醫訊 · Shuang Ho News/);
-  assert.match(home, /className="smart-health-icon"/);
-  assert.match(home, /className="smart-health-letter"/);
-  assert.match(home, /className="smart-health-card-footer"/);
-  assert.match(home, /<PillarIcon pillar=\{pillar\.label\}/);
-  assert.match(css, /\.smart-health-grid\{[^}]*grid-template-columns:repeat\(3,1fr\)/);
-  assert.match(css, /\.smart-health-grid\{grid-template-columns:1fr[^}]*\}/);
-  assert.match(css, /\.smart-health-card\{[^}]*min-height:490px/);
+  assert.doesNotMatch(home, /摘錄自院長10月文章|smartHealthPillars|PillarIcon|smart-health-card/);
+  assert.match(css, /\.smart-health-banner\{[^}]*grid-template-columns:minmax\(250px,30%\) minmax\(0,1fr\)/);
+  assert.match(css, /\.smart-health-banner\{grid-template-columns:1fr[^}]*\}/);
+  assert.deepEqual([...hospitalPhoto.subarray(0, 3)], [0xff, 0xd8, 0xff]);
 });
 
 test("desktop reader zoom scales beyond its default maximum width", async () => {
