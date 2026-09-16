@@ -78,7 +78,7 @@ export default async function Home() {
               <Link href="/issues">查看全部 →</Link>
             </div>
             <div className="issue-grid">
-              {archive.map((issue) => (
+              {archive.slice(0, 6).map((issue) => (
                 <Link className="issue-card" href={`/issues/${issue.issue_id}`} key={issue.issue_id}>
                   <Cover issue={issue} small />
                   <strong>
@@ -116,7 +116,7 @@ function SmartHealthSection() {
         <div className="smart-health-content">
           <div className="smart-health-copy">
             <div className="smart-health-title">
-              <p className="eyebrow">SMART HEALTH HOSPITAL</p>
+              <p className="eyebrow">SHH・SMART HEALTH HOSPITAL</p>
               <h2 id="smart-health-title">從雙和醫院，到智慧健康醫院</h2>
             </div>
             <blockquote className="smart-health-philosophy">

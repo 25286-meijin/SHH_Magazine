@@ -177,6 +177,17 @@ test("the issue archive provides a visible return-home button", async () => {
   assert.match(archive, /返回首頁/);
 });
 
+test("homepage shows only the six latest issues while the archive keeps all published issues", async () => {
+  const [home, archive] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/issues/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(home, /archive\.slice\(0, 6\)\.map/);
+  assert.match(archive, /issues\.map/);
+  assert.doesNotMatch(archive, /issues\.slice\(0, 6\)/);
+});
+
 test("homepage ends with a compact Smart Health Hospital brand banner", async () => {
   const [home, css, hospitalPhoto] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -186,7 +197,7 @@ test("homepage ends with a compact Smart Health Hospital brand banner", async ()
 
   assert.match(home, /className="smart-health"/);
   assert.match(home, /從雙和醫院，到智慧健康醫院/);
-  assert.match(home, /SMART HEALTH HOSPITAL/);
+  assert.match(home, /SHH・SMART HEALTH HOSPITAL/);
   assert.match(home, /科技不是主角，健康才是結果；/);
   assert.match(home, /醫院不是終點，社區才是延伸。/);
   assert.match(home, /src="\/images\/smart-health-hospital\.jpg"/);
