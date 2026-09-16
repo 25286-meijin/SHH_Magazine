@@ -191,7 +191,7 @@ test("homepage ends with a compact Smart Health Hospital brand banner", async ()
   assert.match(home, /醫院不是終點，社區才是延伸。/);
   assert.match(home, /src="\/images\/smart-health-hospital\.jpg"/);
   assert.match(home, /alt="雙和醫院院區外觀"/);
-  assert.match(home, /className="wrap smart-health-banner"/);
+  assert.match(home, /className="smart-health-banner"/);
   assert.match(home, /className="smart-health-visual"/);
   assert.match(home, /className="smart-health-philosophy"/);
   assert.match(home, /className="smart-health-values"/);
@@ -201,7 +201,10 @@ test("homepage ends with a compact Smart Health Hospital brand banner", async ()
   assert.ok(home.indexOf('className="archive"') < home.indexOf("<SmartHealthSection />"));
   assert.doesNotMatch(home, /PublicFooter|健康知識，|雙和醫訊 · Shuang Ho News/);
   assert.doesNotMatch(home, /摘錄自院長10月文章|smartHealthPillars|PillarIcon|smart-health-card/);
-  assert.match(css, /\.smart-health-banner\{[^}]*grid-template-columns:minmax\(250px,30%\) minmax\(0,1fr\)/);
+  assert.match(css, /\.smart-health-banner\{[^}]*grid-template-columns:minmax\(300px,28%\) minmax\(0,1fr\)/);
+  assert.match(css, /\.smart-health-copy\{[^}]*grid-template-columns:minmax\(0,1\.65fr\) minmax\(300px,1fr\)/);
+  assert.doesNotMatch(css, /\.smart-health-values\{[^}]*border-top/);
+  assert.doesNotMatch(css, /\.smart-health-visual\{[^}]*border-radius/);
   assert.match(css, /\.smart-health-banner\{grid-template-columns:1fr[^}]*\}/);
   assert.deepEqual([...hospitalPhoto.subarray(0, 3)], [0xff, 0xd8, 0xff]);
 });

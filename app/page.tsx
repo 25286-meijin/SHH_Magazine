@@ -103,13 +103,13 @@ export default async function Home() {
 function SmartHealthSection() {
   return (
     <section className="smart-health" aria-labelledby="smart-health-title">
-      <div className="wrap smart-health-banner">
+      <div className="smart-health-banner">
         <div className="smart-health-visual">
           <Image
             src="/images/smart-health-hospital.jpg"
             alt="雙和醫院院區外觀"
             fill
-            sizes="(max-width: 760px) 100vw, 30vw"
+            sizes="(max-width: 760px) 100vw, 28vw"
           />
         </div>
 
