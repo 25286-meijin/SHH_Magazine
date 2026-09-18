@@ -126,11 +126,11 @@ function SmartHealthSection() {
             </blockquote>
           </div>
           <div className="smart-health-values" aria-label="Smart Health Hospital 品牌理念">
-            <span><strong>SMART</strong> 智慧醫療</span>
+            <span><strong>SMART 看病更方便</strong><small>讓科技真正幫上忙</small></span>
             <i aria-hidden="true" />
-            <span><strong>HEALTH</strong> 健康全人</span>
+            <span><strong>HEALTH 老得更健康</strong><small>把健康管理往前移</small></span>
             <i aria-hidden="true" />
-            <span><strong>HOSPITAL</strong> 人本照護</span>
+            <span><strong>HOSPITAL 照護更有溫度</strong><small>讓醫療更順暢・更有溫度</small></span>
           </div>
         </div>
       </div>

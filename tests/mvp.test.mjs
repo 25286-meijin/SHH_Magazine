@@ -206,9 +206,9 @@ test("homepage ends with a compact Smart Health Hospital brand banner", async ()
   assert.match(home, /className="smart-health-visual"/);
   assert.match(home, /className="smart-health-philosophy"/);
   assert.match(home, /className="smart-health-values"/);
-  assert.match(home, /<strong>SMART<\/strong>[\s\S]*智慧醫療/);
-  assert.match(home, /<strong>HEALTH<\/strong>[\s\S]*健康全人/);
-  assert.match(home, /<strong>HOSPITAL<\/strong>[\s\S]*人本照護/);
+  assert.match(home, /<strong>SMART 看病更方便<\/strong>[\s\S]*讓科技真正幫上忙/);
+  assert.match(home, /<strong>HEALTH 老得更健康<\/strong>[\s\S]*把健康管理往前移/);
+  assert.match(home, /<strong>HOSPITAL 照護更有溫度<\/strong>[\s\S]*讓醫療更順暢・更有溫度/);
   assert.ok(home.indexOf('className="archive"') < home.indexOf("<SmartHealthSection />"));
   assert.doesNotMatch(home, /PublicFooter|健康知識，|雙和醫訊 · Shuang Ho News/);
   assert.doesNotMatch(home, /摘錄自院長10月文章|smartHealthPillars|PillarIcon|smart-health-card/);
