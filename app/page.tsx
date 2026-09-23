@@ -10,6 +10,10 @@ export default async function Home() {
   const archive = await getPublishedIssues();
   const latest = archive[0];
   if (!latest) throw new Error("No published issue is configured");
+  const recentIssues = archive
+    .filter((issue) => issue.issue_id !== latest.issue_id)
+    .sort((a, b) => b.publish_date.localeCompare(a.publish_date))
+    .slice(0, 6);
 
   return (
     <>
@@ -78,16 +82,13 @@ export default async function Home() {
               <Link href="/issues">查看全部 →</Link>
             </div>
             <div className="issue-grid">
-              {archive.slice(0, 6).map((issue) => (
+              {recentIssues.map((issue) => (
                 <Link className="issue-card" href={`/issues/${issue.issue_id}`} key={issue.issue_id}>
                   <Cover issue={issue} small />
                   <strong>
                     {issue.year} 年 {String(issue.month).padStart(2, "0")} 月
                   </strong>
-                  <span>
-                    {issue.homepage_headline}
-                    {issue === latest ? " · 最新一期" : ""}
-                  </span>
+                  <span>{issue.homepage_headline}</span>
                 </Link>
               ))}
             </div>

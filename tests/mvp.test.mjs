@@ -177,13 +177,17 @@ test("the issue archive provides a visible return-home button", async () => {
   assert.match(archive, /返回首頁/);
 });
 
-test("homepage shows only the six latest issues while the archive keeps all published issues", async () => {
+test("homepage excludes the latest issue and shows the next six by publish date while the archive keeps all published issues", async () => {
   const [home, archive] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/issues/page.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(home, /archive\.slice\(0, 6\)\.map/);
+  assert.match(home, /archive[\s\S]*\.filter\(\(issue\) => issue\.issue_id !== latest\.issue_id\)/);
+  assert.match(home, /\.sort\(\(a, b\) => b\.publish_date\.localeCompare\(a\.publish_date\)\)/);
+  assert.match(home, /\.slice\(0, 6\)/);
+  assert.match(home, /recentIssues\.map/);
+  assert.doesNotMatch(home, /archive\.slice\(0, 6\)\.map/);
   assert.match(archive, /issues\.map/);
   assert.doesNotMatch(archive, /issues\.slice\(0, 6\)/);
 });
