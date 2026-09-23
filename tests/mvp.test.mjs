@@ -118,8 +118,8 @@ test("issue cards use large dates, secondary themes, and visible cover shadows",
     readFile(new URL("../app/issues/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(home, /<strong>\{issue\.year\} 年 \{String\(issue\.month\)/);
-  assert.match(home, /<span>\{issue\.homepage_headline\}/);
+  assert.match(home, /<strong>[\s\S]*\{issue\.year\} 年 \{String\(issue\.month\)/);
+  assert.match(home, /<span>[\s\S]*\{issue\.homepage_headline\}/);
   assert.match(archive, /<strong>\{i\.year\} 年 \{String\(i\.month\)/);
   assert.match(archive, /<span>\{i\.homepage_headline\}<\/span>/);
   assert.match(css, /\.cover-small\{box-shadow:(?!none)/);
@@ -175,6 +175,60 @@ test("the issue archive provides a visible return-home button", async () => {
   );
   assert.match(archive, /className="button secondary" href="\/"/);
   assert.match(archive, /返回首頁/);
+});
+
+test("homepage excludes the latest issue and shows the next six by publish date while the archive keeps all published issues", async () => {
+  const [home, archive] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/issues/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(home, /archive[\s\S]*\.filter\(\(issue\) => issue\.issue_id !== latest\.issue_id\)/);
+  assert.match(home, /\.sort\(\(a, b\) => b\.publish_date\.localeCompare\(a\.publish_date\)\)/);
+  assert.match(home, /\.slice\(0, 6\)/);
+  assert.match(home, /recentIssues\.map/);
+  assert.doesNotMatch(home, /archive\.slice\(0, 6\)\.map/);
+  assert.match(archive, /issues\.map/);
+  assert.doesNotMatch(archive, /issues\.slice\(0, 6\)/);
+});
+
+test("homepage ends with a compact Smart Health Hospital brand banner", async () => {
+  const [home, css, hospitalPhoto] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/images/smart-health-hospital.jpg", import.meta.url)),
+  ]);
+
+  assert.match(home, /className="smart-health"/);
+  assert.match(home, /從雙和醫院，到智慧健康醫院/);
+  assert.match(home, /SHH・SMART HEALTH HOSPITAL/);
+  assert.match(home, /科技不是主角，健康才是結果；/);
+  assert.match(home, /醫院不是終點，社區才是延伸。/);
+  assert.match(home, /src="\/images\/smart-health-hospital\.jpg"/);
+  assert.match(home, /alt="雙和醫院院區外觀"/);
+  assert.match(home, /className="smart-health-banner"/);
+  assert.match(home, /className="smart-health-visual"/);
+  assert.match(home, /className="smart-health-philosophy"/);
+  assert.match(home, /className="smart-health-values"/);
+  assert.match(home, /<strong>SMART 看病更方便<\/strong>[\s\S]*讓科技真正幫上忙/);
+  assert.match(home, /<strong>HEALTH 老得更健康<\/strong>[\s\S]*把健康管理往前移/);
+  assert.match(home, /<strong>HOSPITAL 照護更有溫度<\/strong>[\s\S]*讓醫療更順暢・更有溫度/);
+  assert.ok(home.indexOf('className="archive"') < home.indexOf("<SmartHealthSection />"));
+  assert.doesNotMatch(home, /PublicFooter|健康知識，|雙和醫訊 · Shuang Ho News/);
+  assert.doesNotMatch(home, /摘錄自院長10月文章|smartHealthPillars|PillarIcon|smart-health-card/);
+  assert.match(css, /\.smart-health-banner\{[^}]*grid-template-columns:minmax\(300px,28%\) minmax\(0,1fr\)/);
+  assert.match(css, /\.smart-health-copy\{[^}]*grid-template-columns:minmax\(0,1\.65fr\) minmax\(300px,1fr\)/);
+  assert.match(css, /@media\(min-width:1024px\)\{\.smart-health-content\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\)\}/);
+  assert.match(css, /\.smart-health-copy,\.smart-health-values\{display:contents\}/);
+  assert.match(css, /\.smart-health-title\{grid-column:1\/5;grid-row:1/);
+  assert.match(css, /\.smart-health-philosophy\{grid-column:5\/7;grid-row:1/);
+  assert.match(css, /\.smart-health-values span:nth-of-type\(1\)\{grid-column:1\/3\}/);
+  assert.match(css, /\.smart-health-values span:nth-of-type\(2\)\{grid-column:3\/5/);
+  assert.match(css, /\.smart-health-values span:nth-of-type\(3\)\{grid-column:5\/7/);
+  assert.doesNotMatch(css, /\.smart-health-values\{[^}]*border-top/);
+  assert.doesNotMatch(css, /\.smart-health-visual\{[^}]*border-radius/);
+  assert.match(css, /\.smart-health-banner\{grid-template-columns:1fr[^}]*\}/);
+  assert.deepEqual([...hospitalPhoto.subarray(0, 3)], [0xff, 0xd8, 0xff]);
 });
 
 test("desktop reader zoom scales beyond its default maximum width", async () => {
