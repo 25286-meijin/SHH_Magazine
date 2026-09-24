@@ -51,7 +51,10 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
       return NextResponse.json({ ok: false, error: "找不到要更新的醫訊" }, { status: 404 });
     }
     if (!originalIssueId && existing) {
-      return NextResponse.json({ ok: false, error: "這個正式期號已經存在" }, { status: 409 });
+      return NextResponse.json({
+        ok: false,
+        error: "這個正式期號已經存在，請從各期醫訊管理選擇該期編輯或重新發布",
+      }, { status: 409 });
     }
 
     const largestPage = Math.max(
