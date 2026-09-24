@@ -134,6 +134,24 @@ test("stored page numbers are added to the direct reader redirect without changi
   assert.match(qrRoute, /if \(storedRoute\.topic\.page_number\)/);
 });
 
+test("stored QR routes redirect once to the configured public site URL", async () => {
+  const qrRoute = await source("app/q/[qrId]/route.ts");
+
+  assert.match(qrRoute, /getPublicSiteUrl/);
+  assert.match(
+    qrRoute,
+    /new URL\(storedRoute\.destination_path, getPublicSiteUrl\(\)\)/,
+  );
+  assert.ok(
+    qrRoute.indexOf("recordQrEntry(storedRoute") <
+      qrRoute.indexOf("new URL(storedRoute.destination_path, getPublicSiteUrl())"),
+  );
+  assert.doesNotMatch(
+    qrRoute.slice(qrRoute.indexOf("if (storedRoute)"), qrRoute.indexOf("// Keep previously printed static QR codes")),
+    /new URL\(`?\/q\//,
+  );
+});
+
 test("admin separates QR management from issue-filtered analytics", async () => {
   const [dashboard, analytics] = await Promise.all([
     source("components/AdminDashboard.tsx"),

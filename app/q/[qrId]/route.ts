@@ -6,7 +6,7 @@ import {
   isAllowedRegistrationUrl,
 } from "@/lib/content";
 import { trackServerEvent } from "@/lib/tracking";
-import { getStoredQrRoute, recordQrEntry } from "@/lib/qr";
+import { getPublicSiteUrl, getStoredQrRoute, recordQrEntry } from "@/lib/qr";
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +21,7 @@ export async function GET(
     const entryId = crypto.randomUUID();
     const qrEntryAtUtc = new Date().toISOString();
     await recordQrEntry(storedRoute, entryId, qrEntryAtUtc).catch(() => undefined);
-    const target = new URL(storedRoute.destination_path, request.url);
+    const target = new URL(storedRoute.destination_path, getPublicSiteUrl());
     if (storedRoute.topic.page_number) {
       target.searchParams.set("page", String(storedRoute.topic.page_number));
     }

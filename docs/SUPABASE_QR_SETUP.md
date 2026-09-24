@@ -6,6 +6,8 @@
 
 - 公開入口維持同一個 Next.js 網站：`/q/<opaque-id>`。
 - `/q/` 在伺服器查詢可信任的 QR 對應、嘗試寫入 `qr_entry`，再直接以 HTTP 302 前往醫訊頁面。
+- 動態 QR 的 302 閱讀器網址以 `NEXT_PUBLIC_SITE_URL` 為基準。舊紙本 QR 可繼續進入原本保留的 Preview `/q/<opaque-id>`；該入口只記錄一次 `qr_entry`，再直接導向目前設定的正式網站 `/read/<期號>`，不會再次經過 `/q/`。
+- 已印製 QR 使用的舊 Preview 網域及其部署必須保留為相容入口；正式切換時只將該部署的 `NEXT_PUBLIC_SITE_URL` 改為正式電子醫訊網域，不得刪除舊網域或 QR 資料。
 - 寫入逾時或失敗不會阻止轉址。
 - `/admin`、`/api/admin/*` 與 QR 圖檔下載都需要 Supabase Auth 使用者，且 `app_metadata.role` 必須是 `admin`。
 - `qr_topics`、`placements`、`qr_routes`、`qr_events` 全部啟用 Row Level Security；匿名金鑰不能讀取這些資料。
