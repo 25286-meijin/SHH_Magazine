@@ -33,6 +33,12 @@ type IssueOption = {
   publish_date: string;
 };
 
+type DeletionJob = {
+  issue_id: string;
+  status: "storage_pending" | "storage_failed";
+  last_error: string | null;
+};
+
 type FormState = {
   issue_id: string;
   publish_date: string;
@@ -76,6 +82,9 @@ export default function IssueManager({
   const [coverPreview, setCoverPreview] = useState("");
   const [preparedPageCount, setPreparedPageCount] = useState<number | null>(null);
   const [replacementLatestId, setReplacementLatestId] = useState("");
+  const [deletionJobs, setDeletionJobs] = useState<DeletionJob[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletionConfirmation, setDeletionConfirmation] = useState("");
   const [message, setMessage] = useState("正在讀取醫訊資料…");
   const [busy, setBusy] = useState(false);
   const selected = issues.find((issue) => issue.issue_id === selectedId) ?? null;
@@ -105,6 +114,7 @@ export default function IssueManager({
     try {
       const result = await api("/api/admin/issues");
       applyIssues(result.issues ?? []);
+      setDeletionJobs(result.deletion_jobs ?? []);
       setMessage("");
     } catch (error) {
       setMessage((error as Error).message);
@@ -130,6 +140,8 @@ export default function IssueManager({
     setForm(emptyForm);
     resetPreparedPdf();
     setReplacementLatestId("");
+    setDeleteDialogOpen(false);
+    setDeletionConfirmation("");
     setMessage("");
   }
 
@@ -154,6 +166,8 @@ export default function IssueManager({
     setCoverPreview(issue.cover_image);
     setPreparedPageCount(issue.pdf_page_count);
     setReplacementLatestId("");
+    setDeleteDialogOpen(false);
+    setDeletionConfirmation("");
     setMessage("");
   }
 
@@ -213,20 +227,30 @@ export default function IssueManager({
   }
 
   async function archiveSelected() {
-    if (!selected || !window.confirm("下架後將從公開首頁與歷期醫訊移除，但資料、PDF 與掃碼紀錄會保留。確定下架嗎？")) return;
+    if (!selected || deletionConfirmation !== selected.issue_id) return;
+    await permanentlyDeleteIssue(selected.issue_id, replacementLatestId);
+  }
+
+  async function retryDeletion(issueId: string) {
+    await permanentlyDeleteIssue(issueId, "");
+  }
+
+  async function permanentlyDeleteIssue(issueId: string, replacementId: string) {
     try {
       setBusy(true);
       const result = await api("/api/admin/issues", {
         method: "PATCH",
         body: JSON.stringify({
           action: "archive",
-          issue_id: selected.issue_id,
-          replacement_latest_issue_id: replacementLatestId,
+          issue_id: issueId,
+          confirmation_issue_id: issueId,
+          replacement_latest_issue_id: replacementId,
         }),
       });
       applyIssues(result.issues ?? []);
+      setDeletionJobs(result.deletion_jobs ?? []);
       beginNew();
-      setMessage("醫訊已下架，檔案與既有紀錄均保留。");
+      setMessage(`醫訊 ${issueId} 已永久下架，相關資料與 Storage 檔案已刪除。`);
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
@@ -237,6 +261,14 @@ export default function IssueManager({
   return <section className="admin-section issue-management">
     <div className="section-heading-row issue-management-actions"><button type="button" className="button secondary" onClick={beginNew}>新增醫訊</button></div>
     {message && <p className="admin-message" role="status">{message}</p>}
+
+    {deletionJobs.length > 0 && <div className="deletion-retry panel" role="status">
+      <h3>待完成的檔案清理</h3>
+      {deletionJobs.map(job => <div key={job.issue_id}>
+        <span><strong>{job.issue_id}</strong>{job.last_error ? `｜${job.last_error}` : "｜等待清理 Storage"}</span>
+        <button type="button" className="danger-button" disabled={busy} onClick={() => void retryDeletion(job.issue_id)}>安全重試清理</button>
+      </div>)}
+    </div>}
 
     <div className="scheduled-section">
       <h3>排程中</h3>
@@ -281,10 +313,23 @@ export default function IssueManager({
         </div>
         {selected && <div className="archive-controls">
           {selected.is_latest && <label>下架後的新一期<select value={replacementLatestId} onChange={event => setReplacementLatestId(event.target.value)}><option value="">請選擇已發布期號</option>{publishedReplacements.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.homepage_headline}</option>)}</select></label>}
-          <button type="button" className="danger-button" disabled={busy || (selected.is_latest && !replacementLatestId)} onClick={() => void archiveSelected()}>下架這一期</button>
+          <button type="button" className="danger-button" disabled={busy || (selected.is_latest && !replacementLatestId)} onClick={() => { setDeletionConfirmation(""); setDeleteDialogOpen(true); }}>下架這一期</button>
         </div>}
       </form>
     </div>
+    {deleteDialogOpen && selected && <div className="delete-dialog-backdrop">
+      <div className="delete-dialog panel" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
+        <h3 id="delete-dialog-title">確定永久下架此期醫訊？</h3>
+        <p>下架後，此期醫訊、PDF、封面、QR Code 及所有掃碼統計紀錄將永久刪除，無法復原。請確認是否繼續。</p>
+        <label>請輸入期號 <strong>{selected.issue_id}</strong> 以確認
+          <input value={deletionConfirmation} onChange={event => setDeletionConfirmation(event.target.value)} autoComplete="off" />
+        </label>
+        <div className="delete-dialog-actions">
+          <button type="button" className="button secondary" disabled={busy} onClick={() => { setDeleteDialogOpen(false); setDeletionConfirmation(""); }}>取消</button>
+          <button type="button" className="danger-button" disabled={busy || deletionConfirmation !== selected.issue_id} onClick={() => void archiveSelected()}>確認下架並永久刪除</button>
+        </div>
+      </div>
+    </div>}
   </section>;
 }
 

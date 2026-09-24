@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminErrorResponse, requireAdmin } from "@/lib/admin-auth";
 import { getManagedIssues } from "@/lib/content";
+import { cleanupIssueStorage, retainedRepositoryPaths } from "@/lib/issue-deletion";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 type ServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
@@ -10,7 +11,12 @@ type ServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>
 export async function GET() {
   try {
     await requireAdmin();
-    return NextResponse.json({ ok: true, issues: await getManagedIssues() });
+    const supabase = createServiceSupabaseClient();
+    const [issues, deletionJobs] = await Promise.all([
+      getManagedIssues(),
+      supabase ? getDeletionJobs(supabase) : Promise.resolve([]),
+    ]);
+    return NextResponse.json({ ok: true, issues, deletion_jobs: deletionJobs });
   } catch (error) {
     return adminErrorResponse(error);
   }
@@ -157,6 +163,17 @@ async function archiveIssue(body: Record<string, unknown>) {
     const { supabase: userSupabase } = await requireAdmin();
     const issueId = cleanText(body.issue_id, 7);
     const replacementId = cleanText(body.replacement_latest_issue_id, 7);
+    const confirmationIssueId = cleanText(body.confirmation_issue_id, 7);
+    if (!issueId || confirmationIssueId !== issueId) {
+      return NextResponse.json({ ok: false, error: "請輸入完全相同的醫訊期號以確認永久刪除" }, { status: 400 });
+    }
+    const repositoryPaths = retainedRepositoryPaths(issueId);
+    if (repositoryPaths.length) {
+      return NextResponse.json({
+        ok: false,
+        error: `此期仍有 Repository 靜態副本，正式切換並移除 ${repositoryPaths.join("、")} 前不可宣稱永久刪除`,
+      }, { status: 409 });
+    }
     const supabase = createServiceSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ ok: false, error: "Supabase 尚未設定" }, { status: 503 });
@@ -164,8 +181,11 @@ async function archiveIssue(body: Record<string, unknown>) {
     const { data: issue, error } = await supabase.from("magazine_issues")
       .select("id,issue_id,is_latest").eq("issue_id", issueId).maybeSingle();
     if (error) throw error;
-    if (!issue) return NextResponse.json({ ok: false, error: "找不到醫訊" }, { status: 404 });
-    if (issue.is_latest) {
+    const { data: existingJob, error: jobLookupError } = await supabase
+      .from("magazine_issue_deletion_jobs").select("issue_id").eq("issue_id", issueId).maybeSingle();
+    if (jobLookupError) throw jobLookupError;
+    if (!issue && !existingJob) return NextResponse.json({ ok: false, error: "找不到醫訊或可重試的清理工作" }, { status: 404 });
+    if (issue?.is_latest) {
       if (!replacementId || replacementId === issueId) {
         return NextResponse.json({ ok: false, error: "下架最新一期前，請指定另一個已發布期號" }, { status: 409 });
       }
@@ -175,19 +195,79 @@ async function archiveIssue(body: Record<string, unknown>) {
         return NextResponse.json({ ok: false, error: "指定的新一期不是已發布醫訊" }, { status: 400 });
       }
     }
-    const { error: archiveError } = await userSupabase.rpc("archive_magazine_issue", {
+    const { data: deletion, error: deletionError } = await userSupabase.rpc("begin_magazine_issue_deletion", {
       target_issue_id: issueId,
       replacement_issue_id: replacementId || null,
     });
-    if (archiveError) throw archiveError;
-    const { data, error: archiveLookupError } = await supabase.from("magazine_issues")
-      .select("*").eq("id", issue.id).single();
-    if (archiveLookupError) throw archiveLookupError;
+    if (deletionError) throw deletionError;
+    const deletionResult = normalizeDeletionResult(deletion, issueId);
+
+    let storage;
+    try {
+      storage = await cleanupIssueStorage(supabase, issueId, deletionResult.public_paths);
+    } catch (storageError) {
+      const storageMessage = errorMessage(storageError);
+      await supabase.from("magazine_issue_deletion_jobs").update({
+        status: "storage_failed",
+        last_error: storageMessage,
+        updated_at: new Date().toISOString(),
+      }).eq("issue_id", issueId);
+      revalidateIssuePages(issueId, replacementId);
+      return NextResponse.json({
+        ok: false,
+        retryable: true,
+        error: `資料庫關聯已移除，但檔案清理尚未完成：${storageMessage}。請使用待完成清理項目安全重試。`,
+      }, { status: 500 });
+    }
+
+    const { error: completeError } = await supabase
+      .from("magazine_issue_deletion_jobs").delete().eq("issue_id", issueId);
+    if (completeError) {
+      return NextResponse.json({
+        ok: false,
+        retryable: true,
+        error: `資料與檔案已移除，但完成狀態尚未寫入：${completeError.message}。請安全重試。`,
+      }, { status: 500 });
+    }
     revalidateIssuePages(issueId, replacementId);
-    return NextResponse.json({ ok: true, issue: data, issues: await getManagedIssues() });
+    return NextResponse.json({
+      ok: true,
+      deleted_issue_id: issueId,
+      database_counts: deletionResult.db_counts,
+      storage_counts: {
+        magazine_public: storage.publicFiles.length,
+        magazine_staging: storage.stagingFiles.length,
+      },
+      issues: await getManagedIssues(),
+      deletion_jobs: await getDeletionJobs(supabase),
+    });
   } catch (error) {
     return adminErrorResponse(error);
   }
+}
+
+async function getDeletionJobs(supabase: ServiceClient) {
+  const { data, error } = await supabase.from("magazine_issue_deletion_jobs")
+    .select("issue_id,status,last_error,db_counts,created_at,updated_at")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+function normalizeDeletionResult(value: unknown, issueId: string) {
+  const result = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const publicPaths = Array.isArray(result.public_paths)
+    ? result.public_paths.filter((path): path is string => typeof path === "string")
+    : [];
+  return {
+    issue_id: typeof result.issue_id === "string" ? result.issue_id : issueId,
+    public_paths: publicPaths,
+    db_counts: result.db_counts && typeof result.db_counts === "object" ? result.db_counts : {},
+  };
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "未知錯誤";
 }
 
 async function publishUploadedAssets(

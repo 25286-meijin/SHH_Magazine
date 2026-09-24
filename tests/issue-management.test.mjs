@@ -67,7 +67,43 @@ test("replacement latest validation applies only to the archive action", async (
 
   assert.doesNotMatch(saveSection, /replacement_latest_issue_id/);
   assert.match(archiveSection, /replacement_latest_issue_id/);
-  assert.match(archiveSection, /if \(issue\.is_latest\)/);
+  assert.match(archiveSection, /if \(issue\?\.is_latest\)/);
+});
+
+test("permanent issue deletion is typed, transactional, and storage-retryable", async () => {
+  const [migration, manager, issueApi, deletion] = await Promise.all([
+    source("supabase/migrations/20260924000000_permanent_issue_deletion.sql"),
+    source("components/IssueManager.tsx"),
+    source("app/api/admin/issues/route.ts"),
+    source("lib/issue-deletion.ts"),
+  ]);
+
+  assert.match(migration, /create table public\.magazine_issue_deletion_jobs/i);
+  assert.match(migration, /create or replace function public\.begin_magazine_issue_deletion/i);
+  assert.match(migration, /delete from public\.qr_events/i);
+  assert.match(migration, /delete from public\.qr_routes/i);
+  assert.match(migration, /delete from public\.qr_topics/i);
+  assert.match(migration, /delete from public\.magazine_issue_aliases/i);
+  assert.match(migration, /delete from public\.magazine_issues/i);
+  assert.match(migration, /replacement_issue_id/i);
+  assert.match(migration, /public\.is_admin\(\)/i);
+
+  assert.match(manager, /確定永久下架此期醫訊？/);
+  assert.match(manager, /下架後，此期醫訊、PDF、封面、QR Code 及所有掃碼統計紀錄將永久刪除，無法復原。請確認是否繼續。/);
+  assert.match(manager, /確認下架並永久刪除/);
+  assert.match(manager, /deletionConfirmation !== selected\.issue_id/);
+  assert.doesNotMatch(manager, /資料、PDF 與掃碼紀錄會保留/);
+
+  assert.match(issueApi, /confirmation_issue_id/);
+  assert.match(issueApi, /begin_magazine_issue_deletion/);
+  assert.match(issueApi, /cleanupIssueStorage/);
+  assert.match(issueApi, /magazine_issue_deletion_jobs/);
+  assert.match(issueApi, /revalidateIssuePages/);
+  assert.match(deletion, /magazine-public/);
+  assert.match(deletion, /magazine-staging/);
+  assert.match(deletion, /issues\/\$\{issueId\}/);
+  assert.match(deletion, /covers\/\$\{issueId\}/);
+  assert.match(deletion, /repositoryCopiesRetained/);
 });
 
 test("scheduled publishing is additive, retryable, and driven by Supabase cron", async () => {

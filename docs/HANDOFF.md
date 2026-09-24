@@ -8,6 +8,8 @@ Before connecting Google Apps Script or Google Sheet, follow `docs/QR_ANALYTICS_
 
 Before deciding whether the Pilot can remain on Vercel Hobby, read `docs/HOSTING_CAPACITY_AND_QUOTAS.md` for the PDF transfer, tracking-event, Apps Script, and Google Sheet capacity estimates.
 
+The Stage 2 permanent issue deletion flow is documented in `docs/PERMANENT_ISSUE_DELETION.md`. It uses a transactional database phase, retryable Storage cleanup, typed confirmation, and a temporary safety block for 2026-06 through 2026-09 while Repository copies remain public.
+
 ## Repository and deployment
 
 - GitHub: <https://github.com/wowiscircle/SHH_Magazine>
