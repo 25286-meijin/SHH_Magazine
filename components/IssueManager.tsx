@@ -84,7 +84,7 @@ export default function IssueManager({
     [issues, selectedId],
   );
   const scheduledIssues = issues.filter((issue) => issue.status === "scheduled");
-  const managedIssues = issues.filter((issue) => issue.status !== "scheduled" && issue.status !== "archived");
+  const managedIssues = issues.filter((issue) => issue.status !== "scheduled");
   const taipeiNow = currentTaipeiSchedule();
 
   const applyIssues = useCallback((nextIssues: ManagedIssue[]) => {
@@ -256,7 +256,7 @@ export default function IssueManager({
       </div></div>
 
       <form className="panel admin-form issue-form" onSubmit={submit}>
-        <h3>{selected ? `編輯 ${selected.issue_id}` : "新增醫訊"}</h3>
+        <h3>{selected?.status === "archived" ? `重新發布 ${selected.issue_id}` : selected ? `編輯 ${selected.issue_id}` : "新增醫訊"}</h3>
         <div className="admin-form-grid">
           <label>正式期號<input required value={form.issue_id} pattern="[0-9]{4}-(0[1-9]|1[0-2])" placeholder="YYYY-MM" onChange={event => setForm({ ...form, issue_id: event.target.value })} /></label>
           <label>正式發行日期<input required type="date" value={form.publish_date} onChange={event => setForm({ ...form, publish_date: event.target.value })} /></label>
@@ -277,7 +277,7 @@ export default function IssueManager({
         </fieldset>
         <label className="check-row"><input type="checkbox" checked={form.set_as_latest} onChange={event => setForm({ ...form, set_as_latest: event.target.checked })} />發布後設為最新一期</label>
         <div className="actions issue-actions">
-          <button className="button primary" type="submit" disabled={busy}>確認發布</button>
+          <button className="button primary" type="submit" disabled={busy}>{selected?.status === "archived" ? "重新發布" : "確認發布"}</button>
         </div>
         {selected && <div className="archive-controls">
           {selected.is_latest && <label>下架後的新一期<select value={replacementLatestId} onChange={event => setReplacementLatestId(event.target.value)}><option value="">請選擇已發布期號</option>{publishedReplacements.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.homepage_headline}</option>)}</select></label>}

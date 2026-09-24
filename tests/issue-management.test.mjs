@@ -47,13 +47,15 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.match(manager, /下架/);
   assert.match(manager, /下架後的新一期<select value=\{replacementLatestId\}/);
   assert.doesNotMatch(manager, /下架後的新一期<select required/);
-  assert.match(manager, /status !== "scheduled" && issue\.status !== "archived"/);
+  assert.match(manager, /issues\.filter\(\(issue\) => issue\.status !== "scheduled"\)/);
+  assert.doesNotMatch(manager, /issue\.status !== "archived"/);
   assert.doesNotMatch(manager, /MAGAZINE MANAGEMENT/);
   assert.doesNotMatch(manager, /新增或更新醫訊資料，只需上傳 PDF/);
   assert.doesNotMatch(manager, /<h2>醫訊管理<\/h2>/);
   assert.match(issueApi, /requireAdmin\(\)/);
   assert.match(issueApi, /set_as_latest/);
   assert.match(issueApi, /original_issue_id/);
+  assert.match(issueApi, /請從各期醫訊管理選擇該期編輯或重新發布/);
   assert.match(issueApi, /pdfjs-dist\/legacy\/build\/pdf\.worker\.mjs/);
   assert.match(uploadApi, /createSignedUploadUrl/);
 });
