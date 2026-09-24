@@ -72,7 +72,7 @@ Never commit `.env.local`. Set a long random Admin password and keep all real se
 4. If setting it as latest, verify the homepage, outpatient and shuttle links.
 5. Test at 375px and 390px, then run the full validation commands below.
 
-Existing repository PDFs and covers do not need to move. See `docs/MAGAZINE_MANAGEMENT_SETUP.md`.
+2026-06～2026-09 的 PDF 與封面已完成第一階段 Supabase Storage 遷移；Preview 期間仍保留 Repository 副本，尚未授權移除。詳見 `docs/LEGACY_ASSET_MIGRATION.md` 與 `docs/MAGAZINE_MANAGEMENT_SETUP.md`。
 
 ## Required validation
 
