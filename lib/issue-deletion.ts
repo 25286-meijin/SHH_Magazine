@@ -1,4 +1,3 @@
-import legacyAssetMigration from "@/data/legacy-asset-migration.json";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 type ServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
@@ -13,12 +12,6 @@ export type StorageCleanupResult = {
   publicFiles: string[];
   stagingFiles: string[];
 };
-
-export function retainedRepositoryPaths(issueId: string) {
-  if (!legacyAssetMigration.repositoryCopiesRetained) return [];
-  const issue = legacyAssetMigration.issues.find((item) => item.issueId === issueId);
-  return issue ? [issue.pdf.repositoryPath, issue.cover.repositoryPath] : [];
-}
 
 export async function cleanupIssueStorage(
   supabase: ServiceClient,

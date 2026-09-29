@@ -52,9 +52,9 @@ supabase/migrations/20260914010000_scheduled_magazine_publishing.sql
 
 2026-06～2026-09 的既有 PDF 與封面已在第一階段遷移至 Supabase Storage，資料庫已改用 `magazine-public` 的公開網址及 Storage path。其餘後台上傳資產原本即存於 Supabase Storage。
 
-Preview 與正式 Supabase 切換尚未全部驗收前，Repository 內的 `/demo/issues/2026-06..09.pdf` 與 `/demo/covers/2026-06..09.jpg` 仍保留為舊部署的安全備援，不得先行移除。遷移清單、雜湊與移除前置條件詳見 `docs/LEGACY_ASSET_MIGRATION.md`。
+2026-06～2026-09 已完成 Supabase Storage 遷移；Repository 的 `/demo/issues/` 與 `/demo/covers/` 副本已於永久下架最終階段移除。現行應用程式只讀取 `magazine_issues` 中的 Storage URL。歷史 Vercel Deployment 是 immutable 副本，須由對應 Vercel Project Owner 另行盤點與刪除。
 
-正式期號修改後，舊 `/issues/YYYY-MM`、`/read/YYYY-MM` 會透過 alias 找到新期號；既有 QR topic、route 與匿名掃碼歷史也會同步保留。下架只改為 `archived`，不物理刪除檔案或歷史資料。
+正式期號修改後，舊 `/issues/YYYY-MM`、`/read/YYYY-MM` 會透過 alias 找到新期號；既有 QR topic、route 與匿名掃碼歷史也會同步保留。下架則使用永久刪除交易，完整移除該期 alias、QR 關聯、掃碼事件及 Storage 檔案，不提供重新上架。
 
 ## 權限
 

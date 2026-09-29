@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminErrorResponse, requireAdmin } from "@/lib/admin-auth";
 import { getManagedIssues } from "@/lib/content";
-import { cleanupIssueStorage, retainedRepositoryPaths } from "@/lib/issue-deletion";
+import { cleanupIssueStorage } from "@/lib/issue-deletion";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 type ServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
@@ -29,8 +29,16 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.clone().json() as Record<string, unknown>;
-    if (body.action === "archive") return archiveIssue(body);
     return saveIssue(request, cleanText(body.original_issue_id, 7));
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json() as Record<string, unknown>;
+    return permanentlyDeleteIssue(body);
   } catch (error) {
     return adminErrorResponse(error);
   }
@@ -59,7 +67,7 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
     if (!originalIssueId && existing) {
       return NextResponse.json({
         ok: false,
-        error: "這個正式期號已經存在，請從各期醫訊管理選擇該期編輯或重新發布",
+        error: "這個正式期號已經存在，請從各期醫訊管理選擇該期編輯",
       }, { status: 409 });
     }
 
@@ -158,7 +166,7 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
   }
 }
 
-async function archiveIssue(body: Record<string, unknown>) {
+async function permanentlyDeleteIssue(body: Record<string, unknown>) {
   try {
     const { supabase: userSupabase } = await requireAdmin();
     const issueId = cleanText(body.issue_id, 7);
@@ -166,13 +174,6 @@ async function archiveIssue(body: Record<string, unknown>) {
     const confirmationIssueId = cleanText(body.confirmation_issue_id, 7);
     if (!issueId || confirmationIssueId !== issueId) {
       return NextResponse.json({ ok: false, error: "請輸入完全相同的醫訊期號以確認永久刪除" }, { status: 400 });
-    }
-    const repositoryPaths = retainedRepositoryPaths(issueId);
-    if (repositoryPaths.length) {
-      return NextResponse.json({
-        ok: false,
-        error: `此期仍有 Repository 靜態副本，正式切換並移除 ${repositoryPaths.join("、")} 前不可宣稱永久刪除`,
-      }, { status: 409 });
     }
     const supabase = createServiceSupabaseClient();
     if (!supabase) {
@@ -199,7 +200,12 @@ async function archiveIssue(body: Record<string, unknown>) {
       target_issue_id: issueId,
       replacement_issue_id: replacementId || null,
     });
-    if (deletionError) throw deletionError;
+    if (deletionError) {
+      return NextResponse.json({
+        ok: false,
+        error: `永久下架資料庫交易失敗：${deletionError.message}`,
+      }, { status: 500 });
+    }
     const deletionResult = normalizeDeletionResult(deletion, issueId);
 
     let storage;
@@ -220,6 +226,22 @@ async function archiveIssue(body: Record<string, unknown>) {
       }, { status: 500 });
     }
 
+    try {
+      revalidateIssuePages(issueId, replacementId);
+    } catch (revalidateError) {
+      const revalidateMessage = errorMessage(revalidateError);
+      await supabase.from("magazine_issue_deletion_jobs").update({
+        status: "storage_failed",
+        last_error: `頁面快取更新失敗：${revalidateMessage}`,
+        updated_at: new Date().toISOString(),
+      }).eq("issue_id", issueId);
+      return NextResponse.json({
+        ok: false,
+        retryable: true,
+        error: `資料與檔案已移除，但頁面快取更新失敗：${revalidateMessage}。請使用待完成清理項目安全重試。`,
+      }, { status: 500 });
+    }
+
     const { error: completeError } = await supabase
       .from("magazine_issue_deletion_jobs").delete().eq("issue_id", issueId);
     if (completeError) {
@@ -229,7 +251,6 @@ async function archiveIssue(body: Record<string, unknown>) {
         error: `資料與檔案已移除，但完成狀態尚未寫入：${completeError.message}。請安全重試。`,
       }, { status: 500 });
     }
-    revalidateIssuePages(issueId, replacementId);
     return NextResponse.json({
       ok: true,
       deleted_issue_id: issueId,

@@ -1,18 +1,16 @@
 {
   "bucket": "magazine-public",
-  "repositoryCopiesRetained": true,
+  "repositoryCopiesRetained": false,
   "issues": [
     {
       "issueId": "2026-06",
       "pageCount": 17,
       "pdf": {
-        "repositoryPath": "public/demo/issues/2026-06.pdf",
         "storagePath": "issues/2026-06/2026-06.pdf",
         "size": 3866119,
         "sha256": "ECA6D7B778F3C6E1DAE906A178800CE43CD11AFFA246F8D5E6E0B9A17C3B8DA3"
       },
       "cover": {
-        "repositoryPath": "public/demo/covers/2026-06.jpg",
         "storagePath": "covers/2026-06/2026-06.jpg",
         "size": 441690,
         "sha256": "29A5A481A8A02B10D556E6F7EDE2DDB150F917F51EFBDED1D1F0BC3BFA3A4AA7"
@@ -22,13 +20,11 @@
       "issueId": "2026-07",
       "pageCount": 17,
       "pdf": {
-        "repositoryPath": "public/demo/issues/2026-07.pdf",
         "storagePath": "issues/2026-07/2026-07.pdf",
         "size": 9466585,
         "sha256": "0711E7E76F2633426B481CC20F5F4EEF61306712925C3DCC024C03E4AF65961D"
       },
       "cover": {
-        "repositoryPath": "public/demo/covers/2026-07.jpg",
         "storagePath": "covers/2026-07/2026-07.jpg",
         "size": 242091,
         "sha256": "0D3976F613A6A627DE3A43928408B9A066A910A5458E51D4E43E97168D14BE9A"
@@ -38,13 +34,11 @@
       "issueId": "2026-08",
       "pageCount": 17,
       "pdf": {
-        "repositoryPath": "public/demo/issues/2026-08.pdf",
         "storagePath": "issues/2026-08/2026-08.pdf",
         "size": 4825065,
         "sha256": "7998D8598A9B7C7EA0A4C45F999925718602FD54793C7D5C7802C5C2E1237054"
       },
       "cover": {
-        "repositoryPath": "public/demo/covers/2026-08.jpg",
         "storagePath": "covers/2026-08/2026-08.jpg",
         "size": 283484,
         "sha256": "BF2BB012806D4175D95DC0D8F551F36B1B1D8024F06F982A73AE540C3EC4FBE8"
@@ -54,13 +48,11 @@
       "issueId": "2026-09",
       "pageCount": 17,
       "pdf": {
-        "repositoryPath": "public/demo/issues/2026-09.pdf",
         "storagePath": "issues/2026-09/2026-09.pdf",
         "size": 2817143,
         "sha256": "72A499B6A031075BFE02DCE6BE24DF8879A27FF0535389651591FB29BDCF2342"
       },
       "cover": {
-        "repositoryPath": "public/demo/covers/2026-09.jpg",
         "storagePath": "covers/2026-09/2026-09.jpg",
         "size": 290977,
         "sha256": "81E52E76EBC11A71E204AFB3EA9BE5867DAD64F37EB02B875E3D5807CBE808B1"

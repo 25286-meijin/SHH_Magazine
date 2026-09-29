@@ -22,11 +22,11 @@ Storage 清理會再次列出物件驗證。全部完成後才移除 deletion jo
 
 固定 `placements` 不在刪除交易內。
 
-## Repository 靜態副本過渡保護
+## Repository 與歷史 Deployment
 
-`data/legacy-asset-migration.json` 目前記錄 2026-06～2026-09 仍保留 Repository PDF/JPG。只刪除 Supabase 並不能讓舊部署的靜態 URL 失效，因此這四期在 `repositoryCopiesRetained` 為 `true` 時會被 API 阻擋永久下架。
+2026-06～2026-09 的 PDF/JPG 已完成 Storage 遷移，現行 Repository 的靜態副本已移除，API 不再有按期號判斷的 409 保護。所有醫訊使用同一套永久刪除流程。
 
-正式網站完成 Storage 切換、舊路徑停止使用並由另一個經審核的變更移除靜態檔案後，才可解除這項過渡保護。系統不會把「Supabase 已刪除、Repository 仍公開」誤報為永久刪除成功。
+已建立的 Vercel Deployment 是 immutable 建置快照。新版程式無法刪除舊快照中的 `/demo/issues` 或 `/demo/covers`；須由對應 Vercel Project Owner 刪除歷史 Deployment。這項平台層歷史副本與現行後台可控制的 Database/Storage 永久刪除分開盤點。
 
 ## 2026-09-29 測試環境驗證結果
 
@@ -36,7 +36,7 @@ Storage 清理會再次列出物件驗證。全部完成後才移除 deletion jo
 - 獨立測試期號 `2099-12` 已驗證資料庫交易、Storage 清理、失敗工作保留及完成後移除工作紀錄；測試期號與其 PDF、封面、QR Code、掃碼事件均已清除。
 - 經管理員明確授權，已永久刪除原本下架的 `2026-10`：`magazine_issues` 1 筆、`qr_topics` 1 筆、`qr_routes` 1 筆、`qr_events` 11 筆、`magazine_issue_aliases` 0 筆，並清除該期 public/staging Storage 物件。
 - 刪除後複核：已發布醫訊 11 期、最新一期 `2026-09`、固定公播區域 9 個、啟用中的既有 QR Code 5 組、`2026-09` 歷史掃碼紀錄 11 筆，皆完整保留。
-- 2026-06～2026-09 的 Repository 靜態 PDF/JPG 仍保留，本次未移除，以避免正式網站完成 Storage 切換前影響既有閱讀。
+- 2026-06～2026-09 的現行 Repository 靜態 PDF/JPG 已移除；Supabase Storage 檔案與 metadata 保留並供現行前台使用。
 
 以上是測試環境的資料操作紀錄，不代表正式 Vercel 已部署或正式環境資料已變更。
 

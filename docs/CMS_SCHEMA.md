@@ -2,7 +2,7 @@
 
 ## Goal
 
-正式版以同一套網站的 `/admin` 作為 Editorial CMS，Supabase 保存 metadata，Supabase Storage 保存後台新上傳的 PDF 與 JPG。既有 local JSON 與靜態檔案保留作為 migration 尚未啟用時的相容 fallback。
+正式版以同一套網站的 `/admin` 作為 Editorial CMS，Supabase 保存 metadata，Supabase Storage 保存後台上傳的 PDF 與 JPG。公開頁面與 Reader 直接讀取 Supabase；local JSON 不再是執行期 fallback。
 
 ## Issue Fields
 
@@ -12,7 +12,7 @@
 | year | yes | 2026 |
 | month | yes | 9 |
 | publish_date | yes | 2026-09-01 |
-| status | yes | draft / published / archived |
+| status | yes | draft / scheduled / published |
 | issue_number | no | 228 |
 | cover_image | yes | URL/path |
 | pdf_url | yes | official URL |
@@ -47,7 +47,7 @@ target_url
 
 管理員在 `/admin` 新增或編輯 metadata，只上傳 PDF；瀏覽器使用既有 `pdfjs-dist` 擷取第一頁並轉為 JPG。PDF/JPG 先以短效 signed upload URL 寫入 private staging bucket，伺服器驗證格式與 PDF 頁數後再發布至 public asset bucket。
 
-下架採 `archived` 狀態，不物理刪除 metadata、QR 對應、歷史掃碼資料或既有資產。若下架目前最新一期，必須先指定另一個已發布期號為最新一期。
+下架採永久刪除：交易式移除 metadata、alias、QR topic／route 與掃碼事件，再清理並複核 Storage。若下架目前最新一期，必須先指定另一個已發布期號為最新一期。Storage 清理失敗時保留 deletion job 供安全重試，不得回報成功。
 
 ## Publish Rules
 

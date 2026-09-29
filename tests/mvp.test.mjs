@@ -1,15 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { access, readFile } from "node:fs/promises";
 
 const loadJson = async (name) => JSON.parse(await readFile(new URL(`../data/${name}`, import.meta.url)));
 
-test("latest published issue is metadata-driven and all published months are present", async () => {
-  const issues = await loadJson("issues.demo.json");
-  const published = issues.filter((issue) => issue.status === "published").sort((a, b) => b.publish_date.localeCompare(a.publish_date));
-  assert.equal(published[0].issue_id, "2026-09");
-  assert.deepEqual(new Set(issues.map((issue) => issue.issue_id)), new Set(["2026-06", "2026-07", "2026-08", "2026-09"]));
+test("published issue content is loaded only from Supabase", async () => {
+  const content = await readFile(new URL("../lib/content.ts", import.meta.url), "utf8");
+  assert.match(content, /from\("magazine_issues"\)/);
+  assert.doesNotMatch(content, /issuesData|legacyIssues|issues\.demo\.json/);
+  assert.doesNotMatch(content, /public\/demo|\/demo\/issues|\/demo\/covers/);
 });
 
 test("QR registry provides all required route types and unique IDs", async () => {
@@ -82,21 +81,12 @@ test("TypeScript resolves the @ alias from the project root", async () => {
   assert.deepEqual(tsconfig.compilerOptions.paths, { "@/*": ["./*"] });
 });
 
-test("all demo issues include a readable PDF and generated cover", async () => {
+test("migrated issues no longer retain repository PDF or cover copies", async () => {
   for (const issueId of ["2026-06", "2026-07", "2026-08", "2026-09"]) {
     const pdfUrl = new URL(`../public/demo/issues/${issueId}.pdf`, import.meta.url);
     const coverUrl = new URL(`../public/demo/covers/${issueId}.jpg`, import.meta.url);
-    const [pdf, cover, pdfStat, coverStat] = await Promise.all([
-      readFile(pdfUrl),
-      readFile(coverUrl),
-      stat(pdfUrl),
-      stat(coverUrl),
-    ]);
-
-    assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
-    assert.deepEqual([...cover.subarray(0, 3)], [0xff, 0xd8, 0xff]);
-    assert.ok(pdfStat.size > 100_000);
-    assert.ok(coverStat.size > 50_000);
+    await assert.rejects(access(pdfUrl));
+    await assert.rejects(access(coverUrl));
   }
 });
 
@@ -144,27 +134,14 @@ test("verified practical-information pages are configured for every issue", asyn
   assert.doesNotMatch(home, /實際頁碼將由編輯 metadata 提供/);
 });
 
-test("the September practical-information pages fit within the supplied PDF", async () => {
+test("migrated issue page counts keep practical-information links in range", async () => {
   const issues = await loadJson("issues.demo.json");
-  const issue = issues.find((item) => item.issue_id === "2026-09");
-  assert.ok(issue);
-  assert.equal(issue.outpatient_page, 10);
-  assert.equal(issue.shuttle_page, 17);
-
-  const pdf = await readFile(
-    new URL("../public/demo/issues/2026-09.pdf", import.meta.url),
-  );
-  const document = await getDocument({
-    data: new Uint8Array(pdf),
-    disableWorker: true,
-  }).promise;
-
-  try {
-    assert.equal(document.numPages, 17);
-    assert.ok(issue.outpatient_page <= document.numPages);
-    assert.ok(issue.shuttle_page <= document.numPages);
-  } finally {
-    await document.destroy();
+  const migration = await loadJson("legacy-asset-migration.json");
+  for (const issue of issues) {
+    const migrated = migration.issues.find((item) => item.issueId === issue.issue_id);
+    assert.ok(migrated);
+    assert.ok(issue.outpatient_page <= migrated.pageCount);
+    assert.ok(issue.shuttle_page <= migrated.pageCount);
   }
 });
 
