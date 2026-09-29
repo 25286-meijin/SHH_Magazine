@@ -10,6 +10,8 @@ Before deciding whether the Pilot can remain on Vercel Hobby, read `docs/HOSTING
 
 The Stage 2 permanent issue deletion flow is documented in `docs/PERMANENT_ISSUE_DELETION.md`. It uses a transactional database phase, retryable Storage cleanup, typed confirmation, and a temporary safety block for 2026-06 through 2026-09 while Repository copies remain public.
 
+On 2026-09-29, the Stage 2 flow was verified in the test Supabase project with an isolated `2099-12` fixture. The four explicitly authorized duplicate uploads and the explicitly authorized archived `2026-10` issue were permanently removed. Final verification retained 11 issues, latest issue `2026-09`, 9 placements, 5 active QR routes, and the 11 historical `2026-09` QR entries. See `docs/PERMANENT_ISSUE_DELETION.md` for exact counts and scope.
+
 ## Repository and deployment
 
 - GitHub: <https://github.com/wowiscircle/SHH_Magazine>
