@@ -103,14 +103,15 @@ test("permanent issue deletion is the only removal path and is storage-retryable
   assert.match(manager, /確認永久下架/);
   assert.match(manager, /正在永久下架並清除相關資料，請稍候…/);
   assert.match(manager, /deleteInFlightRef/);
-  assert.match(manager, /deletionConfirmation !== selected\.issue_id/);
+  assert.doesNotMatch(manager, /deletionConfirmation|請輸入期號/);
   assert.doesNotMatch(manager, /資料、PDF 與掃碼紀錄會保留/);
   assert.doesNotMatch(manager, /window\.confirm|confirm\(/);
 
   assert.match(issueApi, /export async function DELETE/);
   assert.match(manager, /method: "DELETE"/);
   assert.doesNotMatch(issueApi, /action === "archive"|action === "permanent_delete"/);
-  assert.match(issueApi, /confirmation_issue_id/);
+  assert.doesNotMatch(issueApi, /confirmation_issue_id|請輸入完全相同的醫訊期號/);
+  assert.match(issueApi, /\.eq\("issue_id", issueId\)\.maybeSingle\(\)/);
   assert.match(issueApi, /begin_magazine_issue_deletion/);
   assert.match(issueApi, /cleanupIssueStorage/);
   assert.match(issueApi, /deletionResult\.storage_issue_ids/);

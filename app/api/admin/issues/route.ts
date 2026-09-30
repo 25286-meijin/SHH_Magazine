@@ -171,9 +171,8 @@ async function permanentlyDeleteIssue(body: Record<string, unknown>) {
     const { supabase: userSupabase } = await requireAdmin();
     const issueId = cleanText(body.issue_id, 7);
     const replacementId = cleanText(body.replacement_latest_issue_id, 7);
-    const confirmationIssueId = cleanText(body.confirmation_issue_id, 7);
-    if (!issueId || confirmationIssueId !== issueId) {
-      return NextResponse.json({ ok: false, error: "請輸入完全相同的醫訊期號以確認永久刪除" }, { status: 400 });
+    if (!issueId) {
+      return NextResponse.json({ ok: false, error: "缺少要永久下架的醫訊期號" }, { status: 400 });
     }
     const supabase = createServiceSupabaseClient();
     if (!supabase) {

@@ -84,7 +84,6 @@ export default function IssueManager({
   const [replacementLatestId, setReplacementLatestId] = useState("");
   const [deletionJobs, setDeletionJobs] = useState<DeletionJob[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletionConfirmation, setDeletionConfirmation] = useState("");
   const [message, setMessage] = useState("正在讀取醫訊資料…");
   const [busy, setBusy] = useState(false);
   const deleteInFlightRef = useRef(false);
@@ -142,7 +141,6 @@ export default function IssueManager({
     resetPreparedPdf();
     setReplacementLatestId("");
     setDeleteDialogOpen(false);
-    setDeletionConfirmation("");
     setMessage("");
   }
 
@@ -168,7 +166,6 @@ export default function IssueManager({
     setPreparedPageCount(issue.pdf_page_count);
     setReplacementLatestId("");
     setDeleteDialogOpen(false);
-    setDeletionConfirmation("");
     setMessage("");
   }
 
@@ -228,7 +225,7 @@ export default function IssueManager({
   }
 
   async function deleteSelected() {
-    if (!selected || deletionConfirmation !== selected.issue_id) return;
+    if (!selected) return;
     if (selected.is_latest && !replacementLatestId) return;
     await permanentlyDeleteIssue(selected.issue_id, replacementLatestId);
   }
@@ -247,7 +244,6 @@ export default function IssueManager({
         method: "DELETE",
         body: JSON.stringify({
           issue_id: issueId,
-          confirmation_issue_id: issueId,
           replacement_latest_issue_id: replacementId,
         }),
       });
@@ -317,7 +313,7 @@ export default function IssueManager({
           <button className="button primary" type="submit" disabled={busy}>確認發布</button>
         </div>
         {selected && <div className="archive-controls">
-          <button type="button" className="danger-button" disabled={busy} onClick={() => { setDeletionConfirmation(""); setReplacementLatestId(""); setDeleteDialogOpen(true); }}>下架這一期</button>
+          <button type="button" className="danger-button" disabled={busy} onClick={() => { setReplacementLatestId(""); setDeleteDialogOpen(true); }}>下架這一期</button>
         </div>}
       </form>
     </div>
@@ -338,13 +334,10 @@ export default function IssueManager({
             </select>
           </label>
         </div>}
-        <label>請輸入期號 <strong>{selected.issue_id}</strong> 以確認永久下架
-          <input value={deletionConfirmation} onChange={event => setDeletionConfirmation(event.target.value)} autoComplete="off" />
-        </label>
         {busy && <p className="delete-progress" role="status">正在永久下架並清除相關資料，請稍候…</p>}
         <div className="delete-dialog-actions">
-          <button type="button" className="button secondary" disabled={busy} onClick={() => { setDeleteDialogOpen(false); setDeletionConfirmation(""); }}>取消</button>
-          <button type="button" className="danger-button" disabled={busy || deletionConfirmation !== selected.issue_id || (selected.is_latest && !replacementLatestId)} onClick={() => void deleteSelected()}>確認永久下架</button>
+          <button type="button" className="button secondary" disabled={busy} onClick={() => setDeleteDialogOpen(false)}>取消</button>
+          <button type="button" className="danger-button" disabled={busy || (selected.is_latest && !replacementLatestId)} onClick={() => void deleteSelected()}>確認永久下架</button>
         </div>
       </div>
     </div>}
