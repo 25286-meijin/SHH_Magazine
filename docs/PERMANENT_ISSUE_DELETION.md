@@ -9,14 +9,17 @@ API 先呼叫 `begin_magazine_issue_deletion`。這個 PostgreSQL function 會�
 1. 鎖定目標醫訊。
 2. 必要時切換最新一期。
 3. 依外鍵順序刪除 `qr_events`、`qr_routes`、`qr_topics`、`magazine_issue_aliases`、`magazine_issues`。
-4. 建立 `magazine_issue_deletion_jobs`，保存 Storage 清理路徑及各資料表刪除筆數。
+4. 在刪除 alias 前將「目前期號＋全部歷史 alias」寫入 `magazine_issue_deletion_jobs.storage_issue_ids`。
+5. 建立 deletion job，保存 Storage 期號清單、已知清理路徑及各資料表刪除筆數。
 
 交易完成後，API 才清理：
 
-- `magazine-public/issues/<issueId>/`
-- `magazine-public/covers/<issueId>/`
-- `magazine-public/<issueId>.pdf`、`<issueId>.jpg`（若存在）
-- `magazine-staging` 中檔名完全符合 `<issueId>.pdf` 或 `<issueId>.jpg` 的暫存上傳
+- `magazine-public/issues/<storageIssueId>/`
+- `magazine-public/covers/<storageIssueId>/`
+- `magazine-public/<storageIssueId>.pdf`、`<storageIssueId>.jpg`（若存在）
+- `magazine-staging` 中檔名完全符合 `<storageIssueId>.pdf` 或 `<storageIssueId>.jpg` 的暫存上傳
+
+`storageIssueId` 來自 transaction 中凍結的現期號與歷史 alias 清單。即使 Database 階段已刪除 alias、Storage 清理中斷，後續安全重試仍可依 deletion job 完整清理舊期號檔案。檔案判斷使用完整資料夾名或完整檔名，不使用部分字串模糊比對。
 
 Storage 清理會再次列出物件驗證。全部完成後才移除 deletion job 並回報成功。任何部分失敗時，job 會保留 `storage_failed` 與錯誤訊息，後台顯示「安全重試清理」。重試不會再次刪除其他資料。
 

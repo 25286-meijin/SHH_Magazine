@@ -15,20 +15,27 @@ export type StorageCleanupResult = {
 
 export async function cleanupIssueStorage(
   supabase: ServiceClient,
-  issueId: string,
+  issueIds: string[],
   knownPublicPaths: string[],
 ): Promise<StorageCleanupResult> {
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(issueId)) throw new Error("醫訊期號格式不正確");
+  const storageIssueIds = [...new Set(issueIds)];
+  if (!storageIssueIds.length || storageIssueIds.some((issueId) => !/^\d{4}-(0[1-9]|1[0-2])$/.test(issueId))) {
+    throw new Error("醫訊期號格式不正確");
+  }
 
-  const publicCandidates = new Set<string>([
-    ...knownPublicPaths,
-    `${issueId}.pdf`,
-    `${issueId}.jpg`,
-    ...(await listStorageFiles(supabase, PUBLIC_BUCKET, `issues/${issueId}`)),
-    ...(await listStorageFiles(supabase, PUBLIC_BUCKET, `covers/${issueId}`)),
-  ]);
+  const publicCandidates = new Set<string>(knownPublicPaths);
+  for (const storageIssueId of storageIssueIds) {
+    publicCandidates.add(`${storageIssueId}.pdf`);
+    publicCandidates.add(`${storageIssueId}.jpg`);
+    for (const path of await listStorageFiles(supabase, PUBLIC_BUCKET, `issues/${storageIssueId}`)) {
+      publicCandidates.add(path);
+    }
+    for (const path of await listStorageFiles(supabase, PUBLIC_BUCKET, `covers/${storageIssueId}`)) {
+      publicCandidates.add(path);
+    }
+  }
   const stagingFiles = (await listStorageFiles(supabase, STAGING_BUCKET, ""))
-    .filter((path) => path.endsWith(`/${issueId}.pdf`) || path.endsWith(`/${issueId}.jpg`));
+    .filter((path) => storageIssueIds.some((storageIssueId) => matchesIssueAssetFile(path, storageIssueId)));
 
   const publicFiles = [...publicCandidates].filter(Boolean);
   await removeStorageFiles(supabase, PUBLIC_BUCKET, publicFiles);
@@ -38,17 +45,26 @@ export async function cleanupIssueStorage(
     listStorageFiles(supabase, PUBLIC_BUCKET, ""),
     listStorageFiles(supabase, STAGING_BUCKET, ""),
   ]);
-  const publicRemainder = remainingPublic.filter((path) =>
-    publicFiles.includes(path) || path.startsWith(`issues/${issueId}/`) || path.startsWith(`covers/${issueId}/`),
-  );
+  const publicRemainder = remainingPublic.filter((path) => publicFiles.includes(path)
+    || storageIssueIds.some((storageIssueId) =>
+      path.startsWith(`issues/${storageIssueId}/`)
+      || path.startsWith(`covers/${storageIssueId}/`)
+      || path === `${storageIssueId}.pdf`
+      || path === `${storageIssueId}.jpg`,
+    ));
   const stagingRemainder = remainingStaging.filter(
-    (path) => path.endsWith(`/${issueId}.pdf`) || path.endsWith(`/${issueId}.jpg`),
+    (path) => storageIssueIds.some((storageIssueId) => matchesIssueAssetFile(path, storageIssueId)),
   );
   if (publicRemainder.length || stagingRemainder.length) {
     throw new Error("Storage 尚有此期檔案，請安全重試清理");
   }
 
   return { publicFiles, stagingFiles };
+}
+
+function matchesIssueAssetFile(path: string, storageIssueId: string) {
+  const fileName = path.split("/").at(-1);
+  return fileName === `${storageIssueId}.pdf` || fileName === `${storageIssueId}.jpg`;
 }
 
 async function listStorageFiles(

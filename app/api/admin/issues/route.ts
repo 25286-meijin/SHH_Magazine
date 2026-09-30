@@ -210,7 +210,11 @@ async function permanentlyDeleteIssue(body: Record<string, unknown>) {
 
     let storage;
     try {
-      storage = await cleanupIssueStorage(supabase, issueId, deletionResult.public_paths);
+      storage = await cleanupIssueStorage(
+        supabase,
+        deletionResult.storage_issue_ids,
+        deletionResult.public_paths,
+      );
     } catch (storageError) {
       const storageMessage = errorMessage(storageError);
       await supabase.from("magazine_issue_deletion_jobs").update({
@@ -280,8 +284,12 @@ function normalizeDeletionResult(value: unknown, issueId: string) {
   const publicPaths = Array.isArray(result.public_paths)
     ? result.public_paths.filter((path): path is string => typeof path === "string")
     : [];
+  const storageIssueIds = Array.isArray(result.storage_issue_ids)
+    ? result.storage_issue_ids.filter((id): id is string => typeof id === "string")
+    : [issueId];
   return {
     issue_id: typeof result.issue_id === "string" ? result.issue_id : issueId,
+    storage_issue_ids: storageIssueIds.length ? [...new Set(storageIssueIds)] : [issueId],
     public_paths: publicPaths,
     db_counts: result.db_counts && typeof result.db_counts === "object" ? result.db_counts : {},
   };

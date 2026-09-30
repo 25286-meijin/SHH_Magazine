@@ -71,8 +71,9 @@ test("replacement latest validation applies only to permanent deletion", async (
 });
 
 test("permanent issue deletion is the only removal path and is storage-retryable", async () => {
-  const [migration, retirement, manager, issueApi, deletion] = await Promise.all([
+  const [migration, aliasStorageMigration, retirement, manager, issueApi, deletion] = await Promise.all([
     source("supabase/migrations/20260924000000_permanent_issue_deletion.sql"),
+    source("supabase/migrations/20260930000000_preserve_deletion_storage_issue_ids.sql"),
     source("supabase/migrations/20260929000000_remove_legacy_archive.sql"),
     source("components/IssueManager.tsx"),
     source("app/api/admin/issues/route.ts"),
@@ -88,6 +89,10 @@ test("permanent issue deletion is the only removal path and is storage-retryable
   assert.match(migration, /delete from public\.magazine_issues/i);
   assert.match(migration, /replacement_issue_id/i);
   assert.match(migration, /public\.is_admin\(\)/i);
+  assert.match(aliasStorageMigration, /add column if not exists storage_issue_ids text\[\]/i);
+  assert.match(aliasStorageMigration, /select alias[\s\S]*magazine_issue_aliases[\s\S]*magazine_issue_id = target_issue\.id/i);
+  assert.match(aliasStorageMigration, /storage_issue_ids[\s\S]*delete from public\.magazine_issue_aliases/i);
+  assert.match(aliasStorageMigration, /'storage_issue_ids', to_jsonb\(storage_identifiers\)/i);
   assert.match(retirement, /drop function if exists public\.archive_magazine_issue\(text, text\)/i);
   assert.match(retirement, /status in \('draft', 'scheduled', 'published'\)/i);
 
@@ -108,13 +113,18 @@ test("permanent issue deletion is the only removal path and is storage-retryable
   assert.match(issueApi, /confirmation_issue_id/);
   assert.match(issueApi, /begin_magazine_issue_deletion/);
   assert.match(issueApi, /cleanupIssueStorage/);
+  assert.match(issueApi, /deletionResult\.storage_issue_ids/);
   assert.match(issueApi, /magazine_issue_deletion_jobs/);
   assert.match(issueApi, /revalidateIssuePages/);
   assert.match(issueApi, /頁面快取更新失敗/);
   assert.match(deletion, /magazine-public/);
   assert.match(deletion, /magazine-staging/);
-  assert.match(deletion, /issues\/\$\{issueId\}/);
-  assert.match(deletion, /covers\/\$\{issueId\}/);
+  assert.match(deletion, /issueIds: string\[\]/);
+  assert.match(deletion, /issues\/\$\{storageIssueId\}/);
+  assert.match(deletion, /covers\/\$\{storageIssueId\}/);
+  assert.match(deletion, /fileName === `\$\{storageIssueId\}\.pdf`/);
+  assert.match(deletion, /fileName === `\$\{storageIssueId\}\.jpg`/);
+  assert.doesNotMatch(deletion, /includes\(storageIssueId\)/);
   assert.doesNotMatch(deletion, /repositoryCopiesRetained|retainedRepositoryPaths/);
 });
 

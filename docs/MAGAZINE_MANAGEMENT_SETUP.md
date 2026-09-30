@@ -32,6 +32,16 @@ supabase/migrations/20260914010000_scheduled_magazine_publishing.sql
 
 不需要新增環境變數；沿用 QR 功能已使用的 Supabase URL、publishable key 與 server-only secret。禁止把任何值提交到 Git。
 
+永久下架另需依序執行：
+
+```text
+supabase/migrations/20260924000000_permanent_issue_deletion.sql
+supabase/migrations/20260929000000_remove_legacy_archive.sql
+supabase/migrations/20260930000000_preserve_deletion_storage_issue_ids.sql
+```
+
+最後一個 migration 會在 deletion job 凍結現期號與歷史 alias，保證醫訊改過期號後的 PDF、封面與 staging 歷史檔也可安全重試清理。
+
 ## 新增與更新
 
 1. 管理員登入 `/admin`，選擇「醫訊管理」。
