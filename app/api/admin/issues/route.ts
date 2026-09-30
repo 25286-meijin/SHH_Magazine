@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminErrorResponse, requireAdmin } from "@/lib/admin-auth";
 import { getManagedIssues } from "@/lib/content";
+import { cleanupIssueStorage } from "@/lib/issue-deletion";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 type ServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
@@ -10,7 +11,12 @@ type ServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>
 export async function GET() {
   try {
     await requireAdmin();
-    return NextResponse.json({ ok: true, issues: await getManagedIssues() });
+    const supabase = createServiceSupabaseClient();
+    const [issues, deletionJobs] = await Promise.all([
+      getManagedIssues(),
+      supabase ? getDeletionJobs(supabase) : Promise.resolve([]),
+    ]);
+    return NextResponse.json({ ok: true, issues, deletion_jobs: deletionJobs });
   } catch (error) {
     return adminErrorResponse(error);
   }
@@ -23,8 +29,16 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.clone().json() as Record<string, unknown>;
-    if (body.action === "archive") return archiveIssue(body);
     return saveIssue(request, cleanText(body.original_issue_id, 7));
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json() as Record<string, unknown>;
+    return permanentlyDeleteIssue(body);
   } catch (error) {
     return adminErrorResponse(error);
   }
@@ -53,7 +67,7 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
     if (!originalIssueId && existing) {
       return NextResponse.json({
         ok: false,
-        error: "這個正式期號已經存在，請從各期醫訊管理選擇該期編輯或重新發布",
+        error: "這個正式期號已經存在，請從各期醫訊管理選擇該期編輯",
       }, { status: 409 });
     }
 
@@ -152,11 +166,14 @@ async function saveIssue(request: NextRequest, originalIssueId: string | null) {
   }
 }
 
-async function archiveIssue(body: Record<string, unknown>) {
+async function permanentlyDeleteIssue(body: Record<string, unknown>) {
   try {
     const { supabase: userSupabase } = await requireAdmin();
     const issueId = cleanText(body.issue_id, 7);
     const replacementId = cleanText(body.replacement_latest_issue_id, 7);
+    if (!issueId) {
+      return NextResponse.json({ ok: false, error: "缺少要永久下架的醫訊期號" }, { status: 400 });
+    }
     const supabase = createServiceSupabaseClient();
     if (!supabase) {
       return NextResponse.json({ ok: false, error: "Supabase 尚未設定" }, { status: 503 });
@@ -164,8 +181,11 @@ async function archiveIssue(body: Record<string, unknown>) {
     const { data: issue, error } = await supabase.from("magazine_issues")
       .select("id,issue_id,is_latest").eq("issue_id", issueId).maybeSingle();
     if (error) throw error;
-    if (!issue) return NextResponse.json({ ok: false, error: "找不到醫訊" }, { status: 404 });
-    if (issue.is_latest) {
+    const { data: existingJob, error: jobLookupError } = await supabase
+      .from("magazine_issue_deletion_jobs").select("issue_id").eq("issue_id", issueId).maybeSingle();
+    if (jobLookupError) throw jobLookupError;
+    if (!issue && !existingJob) return NextResponse.json({ ok: false, error: "找不到醫訊或可重試的清理工作" }, { status: 404 });
+    if (issue?.is_latest) {
       if (!replacementId || replacementId === issueId) {
         return NextResponse.json({ ok: false, error: "下架最新一期前，請指定另一個已發布期號" }, { status: 409 });
       }
@@ -175,19 +195,107 @@ async function archiveIssue(body: Record<string, unknown>) {
         return NextResponse.json({ ok: false, error: "指定的新一期不是已發布醫訊" }, { status: 400 });
       }
     }
-    const { error: archiveError } = await userSupabase.rpc("archive_magazine_issue", {
+    const { data: deletion, error: deletionError } = await userSupabase.rpc("begin_magazine_issue_deletion", {
       target_issue_id: issueId,
       replacement_issue_id: replacementId || null,
     });
-    if (archiveError) throw archiveError;
-    const { data, error: archiveLookupError } = await supabase.from("magazine_issues")
-      .select("*").eq("id", issue.id).single();
-    if (archiveLookupError) throw archiveLookupError;
-    revalidateIssuePages(issueId, replacementId);
-    return NextResponse.json({ ok: true, issue: data, issues: await getManagedIssues() });
+    if (deletionError) {
+      return NextResponse.json({
+        ok: false,
+        error: `永久下架資料庫交易失敗：${deletionError.message}`,
+      }, { status: 500 });
+    }
+    const deletionResult = normalizeDeletionResult(deletion, issueId);
+
+    let storage;
+    try {
+      storage = await cleanupIssueStorage(
+        supabase,
+        deletionResult.storage_issue_ids,
+        deletionResult.public_paths,
+      );
+    } catch (storageError) {
+      const storageMessage = errorMessage(storageError);
+      await supabase.from("magazine_issue_deletion_jobs").update({
+        status: "storage_failed",
+        last_error: storageMessage,
+        updated_at: new Date().toISOString(),
+      }).eq("issue_id", issueId);
+      revalidateIssuePages(issueId, replacementId);
+      return NextResponse.json({
+        ok: false,
+        retryable: true,
+        error: `資料庫關聯已移除，但檔案清理尚未完成：${storageMessage}。請使用待完成清理項目安全重試。`,
+      }, { status: 500 });
+    }
+
+    try {
+      revalidateIssuePages(issueId, replacementId);
+    } catch (revalidateError) {
+      const revalidateMessage = errorMessage(revalidateError);
+      await supabase.from("magazine_issue_deletion_jobs").update({
+        status: "storage_failed",
+        last_error: `頁面快取更新失敗：${revalidateMessage}`,
+        updated_at: new Date().toISOString(),
+      }).eq("issue_id", issueId);
+      return NextResponse.json({
+        ok: false,
+        retryable: true,
+        error: `資料與檔案已移除，但頁面快取更新失敗：${revalidateMessage}。請使用待完成清理項目安全重試。`,
+      }, { status: 500 });
+    }
+
+    const { error: completeError } = await supabase
+      .from("magazine_issue_deletion_jobs").delete().eq("issue_id", issueId);
+    if (completeError) {
+      return NextResponse.json({
+        ok: false,
+        retryable: true,
+        error: `資料與檔案已移除，但完成狀態尚未寫入：${completeError.message}。請安全重試。`,
+      }, { status: 500 });
+    }
+    return NextResponse.json({
+      ok: true,
+      deleted_issue_id: issueId,
+      database_counts: deletionResult.db_counts,
+      storage_counts: {
+        magazine_public: storage.publicFiles.length,
+        magazine_staging: storage.stagingFiles.length,
+      },
+      issues: await getManagedIssues(),
+      deletion_jobs: await getDeletionJobs(supabase),
+    });
   } catch (error) {
     return adminErrorResponse(error);
   }
+}
+
+async function getDeletionJobs(supabase: ServiceClient) {
+  const { data, error } = await supabase.from("magazine_issue_deletion_jobs")
+    .select("issue_id,status,last_error,db_counts,created_at,updated_at")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+function normalizeDeletionResult(value: unknown, issueId: string) {
+  const result = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const publicPaths = Array.isArray(result.public_paths)
+    ? result.public_paths.filter((path): path is string => typeof path === "string")
+    : [];
+  const storageIssueIds = Array.isArray(result.storage_issue_ids)
+    ? result.storage_issue_ids.filter((id): id is string => typeof id === "string")
+    : [issueId];
+  return {
+    issue_id: typeof result.issue_id === "string" ? result.issue_id : issueId,
+    storage_issue_ids: storageIssueIds.length ? [...new Set(storageIssueIds)] : [issueId],
+    public_paths: publicPaths,
+    db_counts: result.db_counts && typeof result.db_counts === "object" ? result.db_counts : {},
+  };
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "未知錯誤";
 }
 
 async function publishUploadedAssets(

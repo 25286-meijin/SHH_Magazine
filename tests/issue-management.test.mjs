@@ -11,7 +11,7 @@ test("issue management schema is additive, protected, and keeps published assets
   assert.match(migration, /homepage_headline[\s\S]*homepage_summary/i);
   assert.match(migration, /outpatient_start_page[\s\S]*outpatient_end_page[\s\S]*shuttle_page/i);
   assert.match(migration, /is_latest boolean/i);
-  assert.match(migration, /status text[\s\S]*draft[\s\S]*published[\s\S]*archived/i);
+  assert.match(migration, /status text[\s\S]*draft[\s\S]*published/i);
   assert.match(migration, /magazine-staging/);
   assert.match(migration, /magazine-public/);
   assert.match(migration, /admins manage magazine issues/i);
@@ -19,7 +19,7 @@ test("issue management schema is additive, protected, and keeps published assets
   assert.doesNotMatch(migration, /drop\s+(table|column)|truncate|delete\s+from/i);
 });
 
-test("admin issue manager supports create, edit, PDF cover generation, publish, and archive", async () => {
+test("admin issue manager supports create, edit, PDF cover generation, publish, and permanent deletion", async () => {
   const [dashboard, manager, issueApi, uploadApi] = await Promise.all([
     source("components/AdminDashboard.tsx"),
     source("components/IssueManager.tsx"),
@@ -45,29 +45,88 @@ test("admin issue manager supports create, edit, PDF cover generation, publish, 
   assert.doesNotMatch(manager, /期號補充資訊（選填）/);
   assert.match(manager, />門診時刻表 PDF 頁次</);
   assert.match(manager, /下架/);
-  assert.match(manager, /下架後的新一期<select value=\{replacementLatestId\}/);
-  assert.doesNotMatch(manager, /下架後的新一期<select required/);
+  assert.match(manager, /此期為目前最新一期，永久下架前請先指定新的最新一期。/);
+  assert.match(manager, /新的最新一期[\s\S]*select value=\{replacementLatestId\}/);
   assert.match(manager, /issues\.filter\(\(issue\) => issue\.status !== "scheduled"\)/);
-  assert.doesNotMatch(manager, /issue\.status !== "archived"/);
+  assert.doesNotMatch(manager, /重新發布/);
   assert.doesNotMatch(manager, /MAGAZINE MANAGEMENT/);
   assert.doesNotMatch(manager, /新增或更新醫訊資料，只需上傳 PDF/);
   assert.doesNotMatch(manager, /<h2>醫訊管理<\/h2>/);
   assert.match(issueApi, /requireAdmin\(\)/);
   assert.match(issueApi, /set_as_latest/);
   assert.match(issueApi, /original_issue_id/);
-  assert.match(issueApi, /請從各期醫訊管理選擇該期編輯或重新發布/);
+  assert.match(issueApi, /請從各期醫訊管理選擇該期編輯/);
   assert.match(issueApi, /pdfjs-dist\/legacy\/build\/pdf\.worker\.mjs/);
   assert.match(uploadApi, /createSignedUploadUrl/);
 });
 
-test("replacement latest validation applies only to the archive action", async () => {
+test("replacement latest validation applies only to permanent deletion", async () => {
   const issueApi = await source("app/api/admin/issues/route.ts");
-  const saveSection = issueApi.slice(issueApi.indexOf("async function saveIssue"), issueApi.indexOf("async function archiveIssue"));
-  const archiveSection = issueApi.slice(issueApi.indexOf("async function archiveIssue"));
+  const saveSection = issueApi.slice(issueApi.indexOf("async function saveIssue"), issueApi.indexOf("async function permanentlyDeleteIssue"));
+  const deleteSection = issueApi.slice(issueApi.indexOf("async function permanentlyDeleteIssue"));
 
   assert.doesNotMatch(saveSection, /replacement_latest_issue_id/);
-  assert.match(archiveSection, /replacement_latest_issue_id/);
-  assert.match(archiveSection, /if \(issue\.is_latest\)/);
+  assert.match(deleteSection, /replacement_latest_issue_id/);
+  assert.match(deleteSection, /if \(issue\?\.is_latest\)/);
+});
+
+test("permanent issue deletion is the only removal path and is storage-retryable", async () => {
+  const [migration, aliasStorageMigration, retirement, manager, issueApi, deletion] = await Promise.all([
+    source("supabase/migrations/20260924000000_permanent_issue_deletion.sql"),
+    source("supabase/migrations/20260930000000_preserve_deletion_storage_issue_ids.sql"),
+    source("supabase/migrations/20260929000000_remove_legacy_archive.sql"),
+    source("components/IssueManager.tsx"),
+    source("app/api/admin/issues/route.ts"),
+    source("lib/issue-deletion.ts"),
+  ]);
+
+  assert.match(migration, /create table public\.magazine_issue_deletion_jobs/i);
+  assert.match(migration, /create or replace function public\.begin_magazine_issue_deletion/i);
+  assert.match(migration, /delete from public\.qr_events/i);
+  assert.match(migration, /delete from public\.qr_routes/i);
+  assert.match(migration, /delete from public\.qr_topics/i);
+  assert.match(migration, /delete from public\.magazine_issue_aliases/i);
+  assert.match(migration, /delete from public\.magazine_issues/i);
+  assert.match(migration, /replacement_issue_id/i);
+  assert.match(migration, /public\.is_admin\(\)/i);
+  assert.match(aliasStorageMigration, /add column if not exists storage_issue_ids text\[\]/i);
+  assert.match(aliasStorageMigration, /select alias[\s\S]*magazine_issue_aliases[\s\S]*magazine_issue_id = target_issue\.id/i);
+  assert.match(aliasStorageMigration, /storage_issue_ids[\s\S]*delete from public\.magazine_issue_aliases/i);
+  assert.match(aliasStorageMigration, /'storage_issue_ids', to_jsonb\(storage_identifiers\)/i);
+  assert.match(retirement, /drop function if exists public\.archive_magazine_issue\(text, text\)/i);
+  assert.match(retirement, /status in \('draft', 'scheduled', 'published'\)/i);
+
+  assert.match(manager, /確定永久下架此期醫訊？/);
+  assert.match(manager, /下架後，此期醫訊、PDF、封面、QR Code 及所有掃碼統計紀錄將永久刪除，無法復原。/);
+  assert.match(manager, /醫訊期號/);
+  assert.match(manager, /醫訊標題/);
+  assert.match(manager, /確認永久下架/);
+  assert.match(manager, /正在永久下架並清除相關資料，請稍候…/);
+  assert.match(manager, /deleteInFlightRef/);
+  assert.doesNotMatch(manager, /deletionConfirmation|請輸入期號/);
+  assert.doesNotMatch(manager, /資料、PDF 與掃碼紀錄會保留/);
+  assert.doesNotMatch(manager, /window\.confirm|confirm\(/);
+
+  assert.match(issueApi, /export async function DELETE/);
+  assert.match(manager, /method: "DELETE"/);
+  assert.doesNotMatch(issueApi, /action === "archive"|action === "permanent_delete"/);
+  assert.doesNotMatch(issueApi, /confirmation_issue_id|請輸入完全相同的醫訊期號/);
+  assert.match(issueApi, /\.eq\("issue_id", issueId\)\.maybeSingle\(\)/);
+  assert.match(issueApi, /begin_magazine_issue_deletion/);
+  assert.match(issueApi, /cleanupIssueStorage/);
+  assert.match(issueApi, /deletionResult\.storage_issue_ids/);
+  assert.match(issueApi, /magazine_issue_deletion_jobs/);
+  assert.match(issueApi, /revalidateIssuePages/);
+  assert.match(issueApi, /頁面快取更新失敗/);
+  assert.match(deletion, /magazine-public/);
+  assert.match(deletion, /magazine-staging/);
+  assert.match(deletion, /issueIds: string\[\]/);
+  assert.match(deletion, /issues\/\$\{storageIssueId\}/);
+  assert.match(deletion, /covers\/\$\{storageIssueId\}/);
+  assert.match(deletion, /fileName === `\$\{storageIssueId\}\.pdf`/);
+  assert.match(deletion, /fileName === `\$\{storageIssueId\}\.jpg`/);
+  assert.doesNotMatch(deletion, /includes\(storageIssueId\)/);
+  assert.doesNotMatch(deletion, /repositoryCopiesRetained|retainedRepositoryPaths/);
 });
 
 test("scheduled publishing is additive, retryable, and driven by Supabase cron", async () => {
@@ -109,7 +168,7 @@ test("admin preview is protected and disables all reader tracking", async () => 
   assert.doesNotMatch(preview, /\/q\//);
 });
 
-test("public issue data uses uncached Supabase state with an unconfigured legacy fallback", async () => {
+test("public issue data uses uncached Supabase state without a repository fallback", async () => {
   const [content, supabaseServer, home, latest, qrApi, analyticsApi] = await Promise.all([
     source("lib/content.ts"),
     source("lib/supabase/server.ts"),
@@ -120,7 +179,7 @@ test("public issue data uses uncached Supabase state with an unconfigured legacy
   ]);
 
   assert.match(content, /from\("magazine_issues"\)/);
-  assert.match(content, /issuesData/);
+  assert.doesNotMatch(content, /issuesData|legacyIssues|issues\.demo\.json/);
   assert.match(content, /is_latest/);
   assert.match(content, /unstable_noStore/);
   assert.match(content, /if \(error\) \(\{ data, error \} = await loadDirectIssue\(\)\)/);

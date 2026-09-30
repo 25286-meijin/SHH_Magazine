@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import IssueManager from "@/components/IssueManager";
 
-type IssueOption = { issue_id: string; title: string; status: "draft" | "scheduled" | "published" | "archived"; is_latest: boolean; publish_date: string };
+type IssueOption = { issue_id: string; title: string; status: "draft" | "scheduled" | "published"; is_latest: boolean; publish_date: string };
 type Topic = { id: string; issue_id: string; title: string; page_number: number | null; active: boolean };
 type Placement = { id: string; name: string; description: string | null; active: boolean };
 type QrRoute = { qr_id: string; created_at: string; active: boolean; topic: Topic; placement: Placement };

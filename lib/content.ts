@@ -1,10 +1,9 @@
-import issuesData from "@/data/issues.demo.json";
 import qrData from "@/data/qr-routes.demo.json";
 import { unstable_noStore } from "next/cache";
 import { cache } from "react";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
-export type IssueStatus = "draft" | "scheduled" | "published" | "archived";
+export type IssueStatus = "draft" | "scheduled" | "published";
 
 export type Issue = {
   id?: string;
@@ -64,41 +63,21 @@ type DatabaseIssue = {
   schedule_error: string | null;
 };
 
-const legacyIssues: Issue[] = issuesData.map((issue, index) => ({
-  ...issue,
-  status: issue.status as IssueStatus,
-  is_latest: index === 0,
-  issue_number: "issue_number" in issue ? issue.issue_number ?? null : null,
-  pdf_url: issue.pdf_url ?? null,
-  local_pdf_path: issue.local_pdf_path ?? null,
-  pdf_storage_path: null,
-  cover_storage_path: null,
-  pdf_page_count: null,
-  outpatient_start_page: issue.outpatient_page,
-  outpatient_end_page: issue.issue_id === "2026-09" ? 16 : null,
-  features: issue.features ?? [],
-  scheduled_publish_at: null,
-  set_latest_on_publish: false,
-  schedule_last_attempt_at: null,
-  schedule_error: null,
-}));
-
-export const issues = legacyIssues;
 export const qrRoutes = qrData as QrRoute[];
 
 export async function getPublishedIssues(): Promise<Issue[]> {
   const stored = await loadStoredIssues(true);
-  return sortPublished(stored ?? legacyIssues.filter((issue) => issue.status === "published"));
+  return sortPublished(stored ?? []);
 }
 
 export async function getManagedIssues(): Promise<Issue[]> {
   const stored = await loadStoredIssues(false);
-  return (stored ?? legacyIssues).sort((a, b) => b.publish_date.localeCompare(a.publish_date));
+  return (stored ?? []).sort((a, b) => b.publish_date.localeCompare(a.publish_date));
 }
 
 export async function getManagedIssue(id: string): Promise<Issue | undefined> {
   const stored = await loadStoredIssues(false);
-  return (stored ?? legacyIssues).find((issue) => issue.issue_id === id);
+  return (stored ?? []).find((issue) => issue.issue_id === id);
 }
 
 export async function getQrEligibleIssue(id: string): Promise<Issue | undefined> {
@@ -126,7 +105,7 @@ export const getIssue = cache(async (id: string): Promise<Issue | undefined> => 
       .maybeSingle();
     let { data, error } = await loadDirectIssue();
     if (error) ({ data, error } = await loadDirectIssue());
-    if (error) return legacyIssues.find((issue) => issue.issue_id === id && issue.status === "published");
+    if (error) return undefined;
     if (data) return normalizeIssue(data as DatabaseIssue);
     const loadAlias = () => supabase
       .from("magazine_issue_aliases")
@@ -150,7 +129,7 @@ export const getIssue = cache(async (id: string): Promise<Issue | undefined> => 
     }
     return undefined;
   }
-  return legacyIssues.find((issue) => issue.issue_id === id && issue.status === "published");
+  return undefined;
 });
 
 export function getQrRoute(id: string): QrRoute | undefined {

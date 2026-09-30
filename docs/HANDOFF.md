@@ -8,6 +8,10 @@ Before connecting Google Apps Script or Google Sheet, follow `docs/QR_ANALYTICS_
 
 Before deciding whether the Pilot can remain on Vercel Hobby, read `docs/HOSTING_CAPACITY_AND_QUOTAS.md` for the PDF transfer, tracking-event, Apps Script, and Google Sheet capacity estimates.
 
+The Stage 2 permanent issue deletion flow is documented in `docs/PERMANENT_ISSUE_DELETION.md`. It uses a transactional database phase, retryable Storage cleanup, a dedicated confirmation modal, and one shared permanent-deletion path for every issue.
+
+On 2026-09-29, the Stage 2 flow was verified in the test Supabase project with an isolated `2099-12` fixture. The four explicitly authorized duplicate uploads and the explicitly authorized archived `2026-10` issue were permanently removed. Final verification retained 11 issues, latest issue `2026-09`, 9 placements, 5 active QR routes, and the 11 historical `2026-09` QR entries. See `docs/PERMANENT_ISSUE_DELETION.md` for exact counts and scope.
+
 ## Repository and deployment
 
 - GitHub: <https://github.com/wowiscircle/SHH_Magazine>
@@ -30,7 +34,7 @@ The public homepage, archive, issue pages, PDF reader, outpatient route, and shu
 - Protected Admin route and demo-only analytics dashboard layout.
 - Public Vercel deployment with deployment-level SSO disabled.
 - Supabase-backed QR Code management and protected scan statistics on the test branch.
-- `/admin` magazine management for create/edit, PDF upload, automatic first-page JPG cover, draft/publish/latest/archive, with legacy issue fallback.
+- `/admin` magazine management for create/edit, PDF upload, automatic first-page JPG cover, schedule/publish/latest, and permanent deletion.
 - Asia/Taipei scheduled publishing via Supabase Cron, scheduled-issue QR preparation, and an admin-only reader preview that disables tracking.
 
 The magazine-management code and migrations are on the test branch. Both migrations were executed successfully in the Supabase test project, and the scheduling Cron job is active once per minute. The Preview can read the four existing issues. The admin and public page-routing layouts passed 375/390px browser checks. An actual PDF upload/save and scheduled publish remain for owner acceptance because validation did not rewrite an existing issue or create fabricated content. Formal Vercel remains unchanged.
@@ -72,7 +76,7 @@ Never commit `.env.local`. Set a long random Admin password and keep all real se
 4. If setting it as latest, verify the homepage, outpatient and shuttle links.
 5. Test at 375px and 390px, then run the full validation commands below.
 
-Existing repository PDFs and covers do not need to move. See `docs/MAGAZINE_MANAGEMENT_SETUP.md`.
+2026-06～2026-09 的 PDF 與封面已完成 Supabase Storage 遷移，現行 Repository 副本已移除。歷史 Vercel Deployment 仍是獨立 immutable 快照，詳見 `docs/LEGACY_ASSET_MIGRATION.md` 與 `docs/MAGAZINE_MANAGEMENT_SETUP.md`。
 
 ## Required validation
 

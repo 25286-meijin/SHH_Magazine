@@ -15,7 +15,7 @@ export default async function AdminIssuePreview({
 }) {
   await requireAdmin();
   const issue = await getManagedIssue(params.issueId);
-  if (!issue || issue.status === "archived") notFound();
+  if (!issue) notFound();
 
   return <PdfReader
     issue={issue}

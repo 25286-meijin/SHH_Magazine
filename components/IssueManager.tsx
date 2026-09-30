@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type ManagedIssue = {
   issue_id: string;
   publish_date: string;
-  status: "draft" | "scheduled" | "published" | "archived";
+  status: "draft" | "scheduled" | "published";
   is_latest: boolean;
   issue_number: string | null;
   homepage_headline: string;
@@ -31,6 +31,12 @@ type IssueOption = {
   status: ManagedIssue["status"];
   is_latest: boolean;
   publish_date: string;
+};
+
+type DeletionJob = {
+  issue_id: string;
+  status: "storage_pending" | "storage_failed";
+  last_error: string | null;
 };
 
 type FormState = {
@@ -76,8 +82,11 @@ export default function IssueManager({
   const [coverPreview, setCoverPreview] = useState("");
   const [preparedPageCount, setPreparedPageCount] = useState<number | null>(null);
   const [replacementLatestId, setReplacementLatestId] = useState("");
+  const [deletionJobs, setDeletionJobs] = useState<DeletionJob[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [message, setMessage] = useState("正在讀取醫訊資料…");
   const [busy, setBusy] = useState(false);
+  const deleteInFlightRef = useRef(false);
   const selected = issues.find((issue) => issue.issue_id === selectedId) ?? null;
   const publishedReplacements = useMemo(
     () => issues.filter((issue) => issue.status === "published" && issue.issue_id !== selectedId),
@@ -105,6 +114,7 @@ export default function IssueManager({
     try {
       const result = await api("/api/admin/issues");
       applyIssues(result.issues ?? []);
+      setDeletionJobs(result.deletion_jobs ?? []);
       setMessage("");
     } catch (error) {
       setMessage((error as Error).message);
@@ -130,6 +140,7 @@ export default function IssueManager({
     setForm(emptyForm);
     resetPreparedPdf();
     setReplacementLatestId("");
+    setDeleteDialogOpen(false);
     setMessage("");
   }
 
@@ -154,6 +165,7 @@ export default function IssueManager({
     setCoverPreview(issue.cover_image);
     setPreparedPageCount(issue.pdf_page_count);
     setReplacementLatestId("");
+    setDeleteDialogOpen(false);
     setMessage("");
   }
 
@@ -212,24 +224,37 @@ export default function IssueManager({
     }
   }
 
-  async function archiveSelected() {
-    if (!selected || !window.confirm("下架後將從公開首頁與歷期醫訊移除，但資料、PDF 與掃碼紀錄會保留。確定下架嗎？")) return;
+  async function deleteSelected() {
+    if (!selected) return;
+    if (selected.is_latest && !replacementLatestId) return;
+    await permanentlyDeleteIssue(selected.issue_id, replacementLatestId);
+  }
+
+  async function retryDeletion(issueId: string) {
+    await permanentlyDeleteIssue(issueId, "");
+  }
+
+  async function permanentlyDeleteIssue(issueId: string, replacementId: string) {
+    if (deleteInFlightRef.current) return;
     try {
+      deleteInFlightRef.current = true;
       setBusy(true);
+      setMessage("正在永久下架並清除相關資料，請稍候…");
       const result = await api("/api/admin/issues", {
-        method: "PATCH",
+        method: "DELETE",
         body: JSON.stringify({
-          action: "archive",
-          issue_id: selected.issue_id,
-          replacement_latest_issue_id: replacementLatestId,
+          issue_id: issueId,
+          replacement_latest_issue_id: replacementId,
         }),
       });
       applyIssues(result.issues ?? []);
+      setDeletionJobs(result.deletion_jobs ?? []);
       beginNew();
-      setMessage("醫訊已下架，檔案與既有紀錄均保留。");
+      setMessage("醫訊已永久下架，相關檔案、QR Code 與掃碼紀錄已清除。");
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
+      deleteInFlightRef.current = false;
       setBusy(false);
     }
   }
@@ -237,6 +262,14 @@ export default function IssueManager({
   return <section className="admin-section issue-management">
     <div className="section-heading-row issue-management-actions"><button type="button" className="button secondary" onClick={beginNew}>新增醫訊</button></div>
     {message && <p className="admin-message" role="status">{message}</p>}
+
+    {deletionJobs.length > 0 && <div className="deletion-retry panel" role="status">
+      <h3>待完成的檔案清理</h3>
+      {deletionJobs.map(job => <div key={job.issue_id}>
+        <span><strong>{job.issue_id}</strong>{job.last_error ? `｜${job.last_error}` : "｜等待清理 Storage"}</span>
+        <button type="button" className="danger-button" disabled={busy} onClick={() => void retryDeletion(job.issue_id)}>安全重試清理</button>
+      </div>)}
+    </div>}
 
     <div className="scheduled-section">
       <h3>排程中</h3>
@@ -256,7 +289,7 @@ export default function IssueManager({
       </div></div>
 
       <form className="panel admin-form issue-form" onSubmit={submit}>
-        <h3>{selected?.status === "archived" ? `重新發布 ${selected.issue_id}` : selected ? `編輯 ${selected.issue_id}` : "新增醫訊"}</h3>
+        <h3>{selected ? `編輯 ${selected.issue_id}` : "新增醫訊"}</h3>
         <div className="admin-form-grid">
           <label>正式期號<input required value={form.issue_id} pattern="[0-9]{4}-(0[1-9]|1[0-2])" placeholder="YYYY-MM" onChange={event => setForm({ ...form, issue_id: event.target.value })} /></label>
           <label>正式發行日期<input required type="date" value={form.publish_date} onChange={event => setForm({ ...form, publish_date: event.target.value })} /></label>
@@ -277,14 +310,37 @@ export default function IssueManager({
         </fieldset>
         <label className="check-row"><input type="checkbox" checked={form.set_as_latest} onChange={event => setForm({ ...form, set_as_latest: event.target.checked })} />發布後設為最新一期</label>
         <div className="actions issue-actions">
-          <button className="button primary" type="submit" disabled={busy}>{selected?.status === "archived" ? "重新發布" : "確認發布"}</button>
+          <button className="button primary" type="submit" disabled={busy}>確認發布</button>
         </div>
         {selected && <div className="archive-controls">
-          {selected.is_latest && <label>下架後的新一期<select value={replacementLatestId} onChange={event => setReplacementLatestId(event.target.value)}><option value="">請選擇已發布期號</option>{publishedReplacements.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.homepage_headline}</option>)}</select></label>}
-          <button type="button" className="danger-button" disabled={busy || (selected.is_latest && !replacementLatestId)} onClick={() => void archiveSelected()}>下架這一期</button>
+          <button type="button" className="danger-button" disabled={busy} onClick={() => { setReplacementLatestId(""); setDeleteDialogOpen(true); }}>下架這一期</button>
         </div>}
       </form>
     </div>
+    {deleteDialogOpen && selected && <div className="delete-dialog-backdrop">
+      <div className="delete-dialog panel" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
+        <h3 id="delete-dialog-title">確定永久下架此期醫訊？</h3>
+        <p className="delete-dialog-warning">下架後，此期醫訊、PDF、封面、QR Code 及所有掃碼統計紀錄將永久刪除，無法復原。</p>
+        <dl className="delete-dialog-summary">
+          <div><dt>醫訊期號</dt><dd>{selected.issue_id}</dd></div>
+          <div><dt>醫訊標題</dt><dd>{selected.homepage_headline}</dd></div>
+        </dl>
+        {selected.is_latest && <div className="delete-latest-warning">
+          <p>此期為目前最新一期，永久下架前請先指定新的最新一期。</p>
+          <label>新的最新一期
+            <select value={replacementLatestId} onChange={event => setReplacementLatestId(event.target.value)}>
+              <option value="">請選擇已發布期號</option>
+              {publishedReplacements.map(issue => <option key={issue.issue_id} value={issue.issue_id}>{issue.issue_id}｜{issue.homepage_headline}</option>)}
+            </select>
+          </label>
+        </div>}
+        {busy && <p className="delete-progress" role="status">正在永久下架並清除相關資料，請稍候…</p>}
+        <div className="delete-dialog-actions">
+          <button type="button" className="button secondary" disabled={busy} onClick={() => setDeleteDialogOpen(false)}>取消</button>
+          <button type="button" className="danger-button" disabled={busy || (selected.is_latest && !replacementLatestId)} onClick={() => void deleteSelected()}>確認永久下架</button>
+        </div>
+      </div>
+    </div>}
   </section>;
 }
 
@@ -330,7 +386,6 @@ function normalizeManagedIssue(issue: ManagedIssue) {
 
 function statusLabel(status: ManagedIssue["status"]) {
   if (status === "published") return "已發布";
-  if (status === "archived") return "已下架";
   if (status === "scheduled") return "排程中";
   return "草稿";
 }
