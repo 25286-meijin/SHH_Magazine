@@ -71,23 +71,31 @@ test("public client events cannot choose their own topic or placement", async ()
 });
 
 test("admin offers only the approved fixed placements and no placement manager", async () => {
-  const [placements, catalog, dashboard, migration] = await Promise.all([
+  const [placements, catalog, dashboard, migration, neurologyMigration] = await Promise.all([
     source("lib/qr-placements.ts"),
     source("app/api/admin/catalog/route.ts"),
     source("components/AdminDashboard.tsx"),
     source("supabase/migrations/20260911020000_fixed_placements.sql"),
+    source("supabase/migrations/20261002000000_add_neurology_placement.sql"),
   ]);
-  const approved = [
+  const originalPlacements = [
     "1F大廳", "2F大電視牆", "1F關防", "B基地美食廣場", "空橋直式",
     "雙和故事館", "骨科", "腎臟+泌尿科", "綜合檢查中心",
   ];
+  const approved = [...originalPlacements, "神經科"];
 
   for (const name of approved) {
     assert.match(placements, new RegExp(name.replace("+", "\\+")));
+  }
+  for (const name of originalPlacements) {
     assert.match(migration, new RegExp(name.replace("+", "\\+")));
   }
   assert.match(catalog, /FIXED_QR_PLACEMENTS/);
   assert.match(catalog, /requireAdmin\(/);
+  assert.match(neurologyMigration, /insert into public\.placements \(name, active\)/i);
+  assert.match(neurologyMigration, /'神經科'/);
+  assert.match(neurologyMigration, /on conflict \(name\) do update set active = true/i);
+  assert.doesNotMatch(neurologyMigration, /delete\s+from|drop\s+(table|column)|truncate/i);
   assert.doesNotMatch(dashboard, /公播區域管理|新增公播區域|編輯區域/);
   assert.doesNotMatch(migration, /delete\s+from|drop\s+(table|column)|truncate/i);
 });

@@ -8,6 +8,7 @@ export const FIXED_QR_PLACEMENTS = [
   "骨科",
   "腎臟+泌尿科",
   "綜合檢查中心",
+  "神經科",
 ] as const;
 
 export function isFixedQrPlacement(name: string) {

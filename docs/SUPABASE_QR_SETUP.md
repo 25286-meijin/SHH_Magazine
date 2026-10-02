@@ -27,11 +27,13 @@
 
 `supabase/migrations/20260911020000_fixed_placements.sql`
 
+`supabase/migrations/20261002000000_add_neurology_placement.sql`
+
 `supabase/migrations/20260914000000_magazine_management.sql`
 
 `supabase/migrations/20260914010000_scheduled_magazine_publishing.sql`
 
-前三個 migration 建立 QR 追蹤與九個已確認的固定公播區域；第四個建立醫訊管理資料表及 Storage bucket，並以 repository 既有 metadata 建立既有期號索引；第五個增加排程欄位、發布函式與每分鐘執行的 Supabase Cron。執行後要確認匿名角色無法讀取 QR 與管理資料；匿名使用者只能透過網站讀取已發布醫訊。
+前三個 migration 建立 QR 追蹤與九個已確認的固定公播區域；`20261002000000_add_neurology_placement.sql` 以可重複安全執行的方式新增「神經科」，合計十個固定公播區域。醫訊管理 migration 建立醫訊資料表及 Storage bucket，並以 repository 既有 metadata 建立既有期號索引；排程 migration 增加排程欄位、發布函式與每分鐘執行的 Supabase Cron。執行後要確認匿名角色無法讀取 QR 與管理資料；匿名使用者只能透過網站讀取已發布醫訊。
 
 ## 3. 建立管理員
 
